@@ -1,2 +1,8 @@
 D:\data\Git\Discord\Bot>
 .\Run\Scripts\RunTools.ps1 file2sql test 1 ../Files/draw.tsv
+
+PS D:\data\Git\RioTest\DiscordBot> python .\DiscordBotEnter.py nerolirain nerolirain
+
+PS D:\data\Git\Discord\Bot\Web\Django\nerolirain> python manage.py runserver
+PS D:\data\Git\Discord\Bot\Web\Django\nerolirain> python manage.py runserver 0.0.0.0:2337
+
