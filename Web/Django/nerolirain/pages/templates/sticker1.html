@@ -1,0 +1,35 @@
+<!-- <h1>Homepage</h1> -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<!-- <h1>Sticker 1</h1> -->
+
+{% block sidebar %}
+<!-- insert default navigation text for every page -->
+<!-- <h1>Sticker 2</h1> -->
+{% endblock %}
+<!-- <h1>Sticker 3</h1> -->
+
+<!-- {{sticker_datas}} -->
+<br />
+
+<table>
+    <tbody>
+        {% for data in sticker_datas %}
+        <!-- <h1>{{ data }}</h1> -->
+        <!-- {{data}} -->
+        <tr>
+            <td> <img src="https://cdn.discordapp.com/stickers/{{data.2}}.png" style="width:100px;height:100px;"> </td>
+            <td> {{data.0}} 次 </td>
+            <td> ({{data.1}}) </td>
+
+        </tr>
+        <!-- <option selected></option> -->
+        {% endfor %}
+    </tbody>
+</table>
+
+
+{% endblock content %}
+<h1>Sticker 4</h1>
