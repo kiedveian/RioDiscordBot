@@ -3,26 +3,37 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- <h1>Sticker 1</h1> -->
 
-{% block sidebar %}
-<!-- insert default navigation text for every page -->
-<!-- <h1>Sticker 2</h1> -->
-{% endblock %}
-<!-- <h1>Sticker 3</h1> -->
-
-<!-- {{sticker_datas}} -->
 <br />
+<form method="GET">
+    {{ form }}
+    <input type="submit" value="更新">
+</form>
 
-<table>
+<table style="width: 600px; ">
     <tbody>
-        {% for data in sticker_datas %}
-        <!-- <h1>{{ data }}</h1> -->
-        <!-- {{data}} -->
         <tr>
-            <td> <img src="https://cdn.discordapp.com/stickers/{{data.2}}.png" style="width:100px;height:100px;"> </td>
-            <td> {{data.0}} 次 </td>
-            <td> ({{data.1}}) </td>
+            <td style="width: 300pt; ">&nbsp; </td>
+            <td style="width: 100pt; ">&nbsp; </td>
+            <td style="width: 400pt; ">&nbsp; </td>
+        </tr>
+
+        {% for data in sticker_datas %}
+        <tr>
+            <td>
+                <img src="https://cdn.discordapp.com/stickers/{{data.2}}.png" width="150pt">
+            </td>
+            <td> ({{data.1}}) <br />
+                {{data.0}} 次 <br />
+                ({{data.3|length}} 人)</td>
+            <td>
+
+                {% for member in data.3 %}
+                {% if forloop.counter <= 3 %} 
+                {{member.0}} 次({{member.1}}) <br />
+                {% endif %}
+                {% endfor %}
+            </td>
 
         </tr>
         <!-- <option selected></option> -->
