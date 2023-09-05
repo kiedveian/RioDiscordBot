@@ -10,13 +10,14 @@ from Utility.MysqlManager import MysqlManager
 
 DRAW_DATA = ["item_id", "weight", "name", "message",
              "image", "festival", "festival_hint"]
+DRAW_CHECK_LIST = [0, 2]
 
 
 class DataType:
     DRAW = 1
 
 
-def File2Mysql(filePath, refData, tablePostfix):
+def File2Mysql(filePath, tablePostfix, refData, checkList):
     with open(filePath, "r", encoding="utf-8") as file:
         sqlArr = []
         count = 0
@@ -25,6 +26,13 @@ def File2Mysql(filePath, refData, tablePostfix):
             if count == 1:
                 continue
             lineSplit = line.split("\t")
+            needSkip = False
+            for index in checkList:
+                if len(lineSplit[index]) == 0:
+                    needSkip = True
+                    break
+            if needSkip:
+                continue
             lineArr = []
             for index in range(len(refData)):
                 lineArr.append(lineSplit[index])
@@ -73,9 +81,11 @@ if __name__ == '__main__':
                 ok = False
 
         refData = None
+        checkList = None
         match dataType:
             case 1:
                 refData = DRAW_DATA
+                checkList = DRAW_CHECK_LIST
             case _:
                 print("資料類別有誤")
                 ok = False
@@ -88,7 +98,7 @@ if __name__ == '__main__':
 
     if ok:
         try:
-            File2Mysql(filePath, refData, tablePostfix)
+            File2Mysql(filePath, tablePostfix, refData, checkList)
         except Exception:
             print(traceback.format_exc())
         print("檔案輸入資料庫完成")
