@@ -51,13 +51,13 @@ class LogToolBase:
     def Log(self, logData: LogData):
         pass
 
-    def I(self, msg: str):
+    def I(self, msg: str, *args, **kwargs):
         pass
 
-    def W(self, msg: str):
+    def W(self, msg: str, *args, **kwargs):
         pass
 
-    def E(self, msg: str):
+    def E(self, msg: str, *args, **kwargs):
         pass
 
 
@@ -76,7 +76,7 @@ class LogToScreen(LogToolBase):
     def __init__(self) -> None:
         super().__init__()
 
-    def Log(self, logData: LogData):
+    def Log(self, logData: LogData, *args, **kwargs):
         typeString = ""
         match logData.logType:
             case LogType.Info:
@@ -90,27 +90,75 @@ class LogToScreen(LogToolBase):
         # print(logData.logType)
         timeString = logData.time.strftime(LOG_TIME_FORMAT)
         print(f'[%s] %s "%s", line %s, %s' % (typeString, timeString,
-              logData.frameInfoData.filename, logData.frameInfoData.lineno, logData.message))
+              logData.frameInfoData.filename, logData.frameInfoData.lineno, logData.message), *args, **kwargs)
 
-    def I(self, msg: str):
+    def I(self, msg: str, *args, **kwargs):
         logData = GetLogData(3, LogType.Info)
         logData.message = msg
-        self.Log(logData)
+        self.Log(logData, *args, **kwargs)
 
-    def W(self, msg: str):
+    def W(self, msg: str, *args, **kwargs):
         logData = GetLogData(3, LogType.Warning)
         logData.message = msg
-        self.Log(logData)
+        self.Log(logData, *args, **kwargs)
 
-    def E(self, msg: str):
+    def E(self, msg: str, *args, **kwargs):
         logData = GetLogData(3, LogType.Error)
         logData.message = msg
-        self.Log(logData)
+        self.Log(logData, *args, **kwargs)
+
+
+class LogToFile(LogToolBase):
+    file = None
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def Log(self, logData: LogData, *args, **kwargs):
+        typeString = ""
+        match logData.logType:
+            case LogType.Info:
+                typeString = "I"
+            case LogType.Warning:
+                typeString = "W"
+            case LogType.Error:
+                typeString = "E"
+            # case LogType.Undefined:
+            #     pass
+        timeString = logData.time.strftime(LOG_TIME_FORMAT)
+        self.file.write(f'[%s] %s "%s", line %s,\n'
+                        '%s\n' %
+                        (typeString, timeString, logData.frameInfoData.filename, logData.frameInfoData.lineno, logData.message), *args, **kwargs)
+
+    def SetFile(self, filename: str):
+        self.file = open(filename, 'a')
+
+    def I(self, msg: str, *args, **kwargs):
+        logData = GetLogData(3, LogType.Info)
+        logData.message = msg
+        self.Log(logData, *args, **kwargs)
+
+    def W(self, msg: str, *args, **kwargs):
+        logData = GetLogData(3, LogType.Warning)
+        logData.message = msg
+        self.Log(logData, *args, **kwargs)
+
+    def E(self, msg: str, *args, **kwargs):
+        logData = GetLogData(3, LogType.Error)
+        logData.message = msg
+        self.Log(logData, *args, **kwargs)
 
 
 def AddLogToScreen():
     global g_allLogs
     g_allLogs.append(LogToScreen())
+
+
+def AddLogToFile(filename):
+    global g_allLogs
+    logger = LogToFile()
+    logger.SetFile(filename)
+    g_allLogs.append(logger)
 
 
 def LogSomethingToScreen(logType, depth, message):

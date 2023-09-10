@@ -5,7 +5,7 @@ import datetime
 import sys
 import traceback
 
-from Utility.DebugTool import AddLogToScreen, Log
+from Utility.DebugTool import AddLogToFile, AddLogToScreen, Log
 
 
 g_bot = None
@@ -34,6 +34,8 @@ async def RunTask():
 
 async def MyMain(argv):
     AddLogToScreen()
+    timeString = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    AddLogToFile(f"Files/logs/{timeString}.log")
     postfix = argv[1]
     botName = argv[2]
 
