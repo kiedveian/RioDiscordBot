@@ -1,4 +1,5 @@
 
+import datetime
 import os
 from typing import Any, Mapping, Optional, Type, Union
 from django.forms.utils import ErrorList
@@ -20,11 +21,38 @@ CHOICES_ORDER_DESC = (
     ("0", "由小至大"),
 )
 
+CHOICES_REMOVE_EXPIRED = (
+    ("1", "不顯示"),
+    ("0", "顯示"),
+)
+
+
+class FormParams:
+    onlyGuild: bool = False
+    orderDesc: bool = True
+    removeExpired: bool = True
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.onlyGuild = False
+        self.orderDesc = True
+        self.removeExpired = True
+
+    def SetData(self, get_request):
+        if 'onlyGuildChoice' in get_request:
+            self.onlyGuild = get_request['onlyGuildChoice'] == "1"
+        if 'orderChoice' in get_request:
+            self.orderDesc = get_request['orderChoice'] == "1"
+        if 'removeExpired' in get_request:
+            self.removeExpired = get_request['removeExpired'] == "1"
+
 
 class TestForm(forms.Form):
     onlyGuildChoice = forms.ChoiceField(
         label="非森林的貼圖", choices=CHOICES_ONLY_GUILD)
     orderChoice = forms.ChoiceField(label="排序", choices=CHOICES_ORDER_DESC)
+    removeExpired = forms.ChoiceField(
+        label="過期貼圖", choices=CHOICES_REMOVE_EXPIRED)
 
 
 class MemberData:
@@ -76,65 +104,102 @@ class StickerPageView(TemplateView):
 
     template_name = "sticker1.html"
 
-    onlyGuild = False
-    orderDesc = True
+    formParams: FormParams = None
+    botUpdateTime:datetime.datetime = None
+    sql: MysqlManager = None
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.onlyGuild = False
-        self.orderDesc = True
+        self.formParams = FormParams()
+        self.botUpdateTime = None
 
-    def GetDatas(self, onlyGuild=False, desc=True):
-        sql = MysqlManager(
+    def GetSql(self) -> MysqlManager:
+        if self.sql == None:
+            self.sql = MysqlManager(
             host=os.getenv("MYSQL_HOST"),
             port=int(os.getenv("MYSQL_PORT")),
             user_name=os.getenv("MYSQL_USER"),
             password=os.getenv("MYSQL_PASSWORD"),
             schema_name=os.getenv("MYSQL_SCHEMA_NAME")
         )
-        # command = f"SELECT user_id, draw_alarm_message FROM user_data_{self.botSettings.sqlPostfix} WHERE draw_alarm_message != 0"
-        # command = (f"SELECT COUNT(0) AS `count`, `stk`.`name`, `log`.`sticker_id`
-        #            f" FROM (`message_log_nerolirain` `log` JOIN `all_sticker` `stk` ON ((`log`.`sticker_id` = `stk`.`sticker_id`)))"
-        #            f" WHERE (`stk`.`guild_id` = 824892342455500800)"
-        #            f" GROUP BY `log`.`sticker_id` ORDER BY `count` DESC"
-        #            )
+        return self.sql
 
-        guildString = ""
-        if onlyGuild:
-            guildString = f" WHERE (`stk`.`guild_id` = {NEROLIRAIN_GUILD_ID})"
+    def UpdateBotUpdateTime(self):
+        timeCmd = f"SELECT check_time FROM discord_bot.all_sticker WHERE sticker_id = {-NEROLIRAIN_GUILD_ID}"
+        subResult = self.GetSql().SimpleSelect(timeCmd)
+        if subResult == None:
+            print("找不到時間")
+            self.botUpdateTime = None
+            return None
+        self.botUpdateTime = subResult[0][0]
 
-        dataCommand = (f"SELECT COUNT(0) AS `count`, `stk`.`name`, `log`.`sticker_id`, `log`.`member_nick`"
+    def GetChooseStickers(self, formParams: FormParams):
+        result = {}
+        whereString = ""
+        if formParams.onlyGuild:
+            if len(whereString) == 0:
+                whereString += "WHERE "
+            else:
+                whereString += " AND"
+            whereString += f" guild_id = {NEROLIRAIN_GUILD_ID}"
+
+        removeTime = datetime.datetime(2020, 1, 1)
+        # 由於同時判定非森林+移除較複雜，改為判定完移除
+        if formParams.removeExpired:
+            removeTime = self.botUpdateTime
+            if removeTime == None:
+                print("找不到時間")
+                return {}
+
+        command = (f"SELECT sticker_id, name, guild_id, check_time FROM discord_bot.all_sticker"
+                   f" {whereString};")
+
+        sqlResult = self.GetSql().SimpleSelect(command)
+
+        for rowData in sqlResult:
+            if rowData[2] == 160768297275621376:
+                # 測試服
+                continue
+            if rowData[2] == NEROLIRAIN_GUILD_ID and rowData[3] < removeTime:
+                continue
+            sticker_id = rowData[0]
+            result[sticker_id] = rowData
+
+        return result
+
+    def GetDatas(self, formParams: FormParams):
+
+        dataCommand = (f"SELECT COUNT(0) AS `count`, `stk`.`name`, `log`.`sticker_id`, `log`.`member_nick`, `stk`.`check_time`"
                        f" FROM (`message_log_nerolirain` `log` JOIN `all_sticker` `stk` ON ((`log`.`sticker_id` = `stk`.`sticker_id`)))"
-                       "%s"
-                       f" GROUP BY `log`.`sticker_id`, `log`.`member_id`"
-                       % (guildString))
+                       f" GROUP BY `log`.`sticker_id`, `log`.`member_id`")
 
-        all_datas = sql.SimpleSelect(dataCommand)
+        rowDatas = self.GetSql().SimpleSelect(dataCommand)
+        if rowDatas == None:
+            return []
+
+        displayStickers = self.GetChooseStickers(formParams)
 
         trans_map = {}
-        for data in all_datas:
-            stk_id = data[2]
+        for row in rowDatas:
+            stk_id = row[2]
+            if stk_id not in displayStickers:
+                continue
             if stk_id not in trans_map:
                 trans_map[stk_id] = StickerItem()
-            trans_map[stk_id].AddData(data)
+            trans_map[stk_id].AddData(row)
 
-        if onlyGuild:
-            allStickerCommand = (f"SELECT sticker_id, name FROM discord_bot.all_sticker WHERE guild_id = {NEROLIRAIN_GUILD_ID};")
-            allSticker = sql.SimpleSelect(allStickerCommand)
-            
-            for rowData in allSticker:
-                sticker_id = rowData[0]
-                if sticker_id not in trans_map:
-                    item = StickerItem()
-                    item.id = sticker_id
-                    item.name = rowData[1]
-                    trans_map[sticker_id] = item
-        return StickerItem.ToHtmlDatas(trans_map, desc)
+        for stk_id in displayStickers:
+            if stk_id > 0 and stk_id not in trans_map:
+                item = StickerItem()
+                item.id = stk_id
+                item.name = displayStickers[stk_id][1]
+                trans_map[stk_id] = item
+
+        return StickerItem.ToHtmlDatas(trans_map, formParams.orderDesc)
 
     def get(self, request, *args, **kwargs):
         if request.GET:
-            self.onlyGuild = request.GET['onlyGuildChoice'] == "1"
-            self.orderDesc = request.GET['orderChoice'] == "1"
+            self.formParams.SetData(request.GET)
         return super().get(request, *args, **kwargs)
 
     def bool2string(self, data):
@@ -144,11 +209,14 @@ class StickerPageView(TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['sticker_datas'] = self.GetDatas(
-            onlyGuild=self.onlyGuild, desc=self.orderDesc)
-        
-        form = TestForm(initial={'onlyGuildChoice': self.bool2string(self.onlyGuild),
-                                 'orderChoice': self.bool2string(self.orderDesc)
+        self.UpdateBotUpdateTime()
+        context['sticker_datas'] = self.GetDatas(self.formParams)
+        timeString = self.botUpdateTime.strftime("%Y-%m-%d %H:%M:%S")
+        context['bot_update_time'] = timeString
+
+        form = TestForm(initial={'onlyGuildChoice': self.bool2string(self.formParams.onlyGuild),
+                                 'orderChoice': self.bool2string(self.formParams.orderDesc),
+                                 'removeExpired': self.bool2string(self.formParams.removeExpired),
                                  })
         context['form'] = form
         return context

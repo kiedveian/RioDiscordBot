@@ -10,6 +10,8 @@
     <input type="submit" value="更新">
 </form>
 
+過期貼圖更新時間：{{bot_update_time}} (萊傑啟動時間)
+
 <table style="width: 600px; ">
     <tbody>
         <tr>
@@ -30,7 +32,7 @@
 
                 {% for member in data.3 %}
                 {% if forloop.counter <= 3 %} 
-                {{member.0}} 次({{member.1}}) <br />
+                {{member.0}} 次({{member.1}}-) <br />
                 {% endif %}
                 {% endfor %}
             </td>
