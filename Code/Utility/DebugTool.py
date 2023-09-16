@@ -2,6 +2,7 @@
 
 import datetime
 from inspect import getframeinfo, stack
+import io
 
 
 LOG_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -10,7 +11,6 @@ g_allLogs = []
 
 
 class Log:
-
     @staticmethod
     def I(*args, **kwargs):
         for log in g_allLogs:
@@ -40,8 +40,6 @@ class LogData:
     stackData = None
     message = None
     time = None
-    # frameInfoData.filename
-    # frameInfoData.lineno
 
     def __init__(self) -> None:
         self.time = datetime.datetime.utcnow()
@@ -61,6 +59,32 @@ class LogToolBase:
         pass
 
 
+class LogToolGeneral(LogToolBase):
+    def I(self, msg: str, *args, **kwargs):
+        depth = 3
+        if "depth" in kwargs:
+            depth = kwargs["depth"]
+        logData = GetLogData(depth, LogType.Info)
+        logData.message = msg
+        self.Log(logData, *args, **kwargs)
+
+    def W(self, msg: str, *args, **kwargs):
+        depth = 3
+        if "depth" in kwargs:
+            depth = kwargs["depth"]
+        logData = GetLogData(depth, LogType.Warning)
+        logData.message = msg
+        self.Log(logData, *args, **kwargs)
+
+    def E(self, msg: str, *args, **kwargs):
+        depth = 3
+        if "depth" in kwargs:
+            depth = kwargs["depth"]
+        logData = GetLogData(depth, LogType.Error)
+        logData.message = msg
+        self.Log(logData, *args, **kwargs)
+
+
 def GetLogData(depth=1, logType=LogType.Undefined) -> LogData:
     result = LogData()
     result.logType = logType
@@ -71,7 +95,7 @@ def GetLogData(depth=1, logType=LogType.Undefined) -> LogData:
     return result
 
 
-class LogToScreen(LogToolBase):
+class LogToScreen(LogToolGeneral):
 
     def __init__(self) -> None:
         super().__init__()
@@ -89,26 +113,17 @@ class LogToScreen(LogToolBase):
             #     pass
         # print(logData.logType)
         timeString = logData.time.strftime(LOG_TIME_FORMAT)
-        print(f'[%s] %s "%s", line %s, %s' % (typeString, timeString,
-              logData.frameInfoData.filename, logData.frameInfoData.lineno, logData.message), *args, **kwargs)
 
-    def I(self, msg: str, *args, **kwargs):
-        logData = GetLogData(3, LogType.Info)
-        logData.message = msg
-        self.Log(logData, *args, **kwargs)
-
-    def W(self, msg: str, *args, **kwargs):
-        logData = GetLogData(3, LogType.Warning)
-        logData.message = msg
-        self.Log(logData, *args, **kwargs)
-
-    def E(self, msg: str, *args, **kwargs):
-        logData = GetLogData(3, LogType.Error)
-        logData.message = msg
-        self.Log(logData, *args, **kwargs)
+        if "depth" in kwargs:
+            del kwargs["depth"]
+        filename = logData.frameInfoData.filename
+        lineno = logData.frameInfoData.lineno
+        print((f'[{typeString}] {timeString} "{filename}", line {lineno}, \n'
+               f'    {logData.message}'),
+              *args, **kwargs)
 
 
-class LogToFile(LogToolBase):
+class LogToFile(LogToolGeneral):
     file = None
 
     def __init__(self) -> None:
@@ -126,27 +141,19 @@ class LogToFile(LogToolBase):
             # case LogType.Undefined:
             #     pass
         timeString = logData.time.strftime(LOG_TIME_FORMAT)
-        self.file.write(f'[%s] %s "%s", line %s,\n'
-                        '%s\n' %
-                        (typeString, timeString, logData.frameInfoData.filename, logData.frameInfoData.lineno, logData.message), *args, **kwargs)
+
+        if "depth" in kwargs:
+            del kwargs["depth"]
+        filename = logData.frameInfoData.filename
+        lineno = logData.frameInfoData.lineno
+        print((f'[{typeString}] {timeString} "{filename}", line {lineno}, \n'
+               f'    {logData.message}'),
+              *args, file=self.file, **kwargs)
+
+        self.file.flush()
 
     def SetFile(self, filename: str):
-        self.file = open(filename, 'a')
-
-    def I(self, msg: str, *args, **kwargs):
-        logData = GetLogData(3, LogType.Info)
-        logData.message = msg
-        self.Log(logData, *args, **kwargs)
-
-    def W(self, msg: str, *args, **kwargs):
-        logData = GetLogData(3, LogType.Warning)
-        logData.message = msg
-        self.Log(logData, *args, **kwargs)
-
-    def E(self, msg: str, *args, **kwargs):
-        logData = GetLogData(3, LogType.Error)
-        logData.message = msg
-        self.Log(logData, *args, **kwargs)
+        self.file = open(filename, 'a', encoding='UTF-8')
 
 
 def AddLogToScreen():

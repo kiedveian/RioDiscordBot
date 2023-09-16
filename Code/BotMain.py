@@ -4,6 +4,7 @@ import asyncio
 import datetime
 import sys
 import traceback
+from Bot.BotFactory.BotFactory import CreateBot
 
 from Utility.DebugTool import AddLogToFile, AddLogToScreen, Log
 
@@ -32,7 +33,8 @@ async def RunTask():
     await g_bot.Start()
 
 
-async def MyMain(argv):
+def MyMain(argv):
+    global g_bot
     AddLogToScreen()
     timeString = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     AddLogToFile(f"Files/logs/{timeString}.log")
@@ -41,12 +43,13 @@ async def MyMain(argv):
 
     Log.I(f"sql postfix: {postfix}")
 
-    # g_bot = CreateBot(botName)
-    # if g_bot == None:
-    #     print(f"bot name error {botName}")
-    # else:
-    #     g_bot.SetData(postfix)
-    #     asyncio.run(MyMain())
+    g_bot = CreateBot(botName)
+    if g_bot == None:
+        Log.E(f"bot name error {botName}")
+    else:
+        g_bot.SetData(postfix)
+        asyncio.run(RunTask())
+
 
 if __name__ == '__main__':
     asyncio.run(MyMain(sys.argv))
