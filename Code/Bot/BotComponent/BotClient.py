@@ -3,10 +3,12 @@
 import discord
 
 from Bot.BotComponent.BotSettings import BotSettings
+from Utility.DebugTool import LogToolGeneral
 from Utility.DebugTool import Log
 
 
 class BotClient(discord.Client):
+    DEFAULT_LOG_DEPTH = LogToolGeneral.DEFAULT_LOG_DEPTH + 1
     botSettings: BotSettings
 
     cacheGuild: discord.Guild
@@ -26,6 +28,33 @@ class BotClient(discord.Client):
     def SetComponents(self, bot):
         self.botSettings = bot.GetComponent("botSettings")
         self.botEvent = bot.GetComponent("botEvent")
+
+    def GetGuild(self) -> discord.Guild:
+        if self.cacheGuild == None:
+            for guild in self.guilds:
+                if guild.id == self.botSettings.closeServerId:
+                    self.LogI("設定主伺服器: ", guild)
+                    self.cacheGuild = guild
+                    break
+            if self.cacheGuild == None:
+                self.LogE("找不到對應主伺服器: ", guild)
+        return self.cacheGuild
+
+    def _GetLogDepth(self, **kwargs):
+        depth = BotClient.DEFAULT_LOG_DEPTH
+        if "depth" in kwargs:
+            depth = kwargs["depth"]
+            del kwargs["depth"]
+        return depth
+
+    def LogI(self, *args,  **kwargs):
+        Log.I(depth=self._GetLogDepth(**kwargs), *args, **kwargs)
+
+    def LogW(self, *args, **kwargs):
+        Log.W(depth=self._GetLogDepth(**kwargs), *args, **kwargs)
+
+    def LogE(self, *args, **kwargs):
+        Log.E(depth=self._GetLogDepth(**kwargs), *args, **kwargs)
 
     async def on_ready(self):
         # 當機器人完成啟動時
