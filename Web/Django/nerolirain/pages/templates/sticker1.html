@@ -9,7 +9,6 @@
     {{ form }}
     <input type="submit" value="更新">
 </form>
-
 過期貼圖更新時間：{{bot_update_time}} (萊傑啟動時間)
 
 <table style="width: 600px; ">
@@ -23,14 +22,15 @@
         {% for data in sticker_datas %}
         <tr>
             <td>
-                <img src="https://cdn.discordapp.com/stickers/{{data.2}}.png" width="150pt">
+                <img src="https://cdn.discordapp.com/stickers/{{data.3}}.png" width="150pt">
             </td>
-            <td> ({{data.1}}) <br />
-                {{data.0}} 次 <br />
-                ({{data.3|length}} 人)</td>
+            <td> 排名 {{ data.0 }} <br/>
+                ({{data.2}}) <br />
+                {{data.1}} 次 <br />
+                ({{data.4|length}} 人)</td>
             <td>
 
-                {% for member in data.3 %}
+                {% for member in data.4 %}
                 {% if forloop.counter <= 3 %} 
                 {{member.0}} 次({{member.1}}-) <br />
                 {% endif %}

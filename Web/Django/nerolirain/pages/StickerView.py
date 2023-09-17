@@ -95,9 +95,21 @@ class StickerItem:
                 memberRow.append([member.count, member.nick])
             memberRow = sorted(
                 memberRow, key=lambda member: member[0], reverse=True)
-            row = [item.totalCount, item.name, item.id, memberRow]
+            row = [-1, item.totalCount, item.name, item.id, memberRow]
             resultList.append(row)
-        return sorted(resultList, key=lambda item: item[0], reverse=desc)
+        sortData = sorted(resultList, key=lambda item: item[1], reverse=desc)
+        lastCount = -1
+        someCount = 1
+        rank = 0
+        for row in sortData:
+            if lastCount == row[1]:
+                someCount += 1
+            else:
+                lastCount = row[1]
+                rank += someCount
+                someCount = 1
+            row[0] = rank
+        return sortData
 
 
 class StickerPageView(TemplateView):
@@ -105,7 +117,7 @@ class StickerPageView(TemplateView):
     template_name = "sticker1.html"
 
     formParams: FormParams = None
-    botUpdateTime:datetime.datetime = None
+    botUpdateTime: datetime.datetime = None
     sql: MysqlManager = None
 
     def __init__(self, **kwargs: Any) -> None:
@@ -116,12 +128,12 @@ class StickerPageView(TemplateView):
     def GetSql(self) -> MysqlManager:
         if self.sql == None:
             self.sql = MysqlManager(
-            host=os.getenv("MYSQL_HOST"),
-            port=int(os.getenv("MYSQL_PORT")),
-            user_name=os.getenv("MYSQL_USER"),
-            password=os.getenv("MYSQL_PASSWORD"),
-            schema_name=os.getenv("MYSQL_SCHEMA_NAME")
-        )
+                host=os.getenv("MYSQL_HOST"),
+                port=int(os.getenv("MYSQL_PORT")),
+                user_name=os.getenv("MYSQL_USER"),
+                password=os.getenv("MYSQL_PASSWORD"),
+                schema_name=os.getenv("MYSQL_SCHEMA_NAME")
+            )
         return self.sql
 
     def UpdateBotUpdateTime(self):
