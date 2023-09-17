@@ -7,11 +7,12 @@ from dotenv import load_dotenv
 from Bot.BotComponent.BotSettings import BotSettings
 from Bot.BotComponent.BotClient import BotClient
 from Bot.BotComponent.Base.CompBase import CompBase
-from Utility.DebugTool import Log
+from Utility.DebugTool import Log, LogToolGeneral
 from Utility.MysqlManager import MysqlManager
 
 
 class BotBase:
+    DEFAULT_LOG_DEPTH = LogToolGeneral.DEFAULT_LOG_DEPTH
     isReady = False
     allComp = {}
     allOnReadyObj = []
@@ -78,7 +79,34 @@ class BotBase:
         pass
 
     def _SetAllComponentInitial(self):
-        pass
+        remainComp = []
+        for key in self.allComp:
+            comp = self.allComp[key]
+            if isinstance(comp, CompBase):
+                remainComp.append(comp)
+        for comp in remainComp:
+            comp.SetComponents(self)
+        tryCount = 0
+        while tryCount < 100 and len(remainComp) != 0:
+            tryCount += 1
+            nextComp = []
+            for comp in remainComp:
+                # comp: CompBase = comp
+                if comp.CanInitial():
+                    comp.Initial()
+                    if not comp.IsInitialized():
+                        nextComp.append(comp)
+                else:
+                    nextComp.append(comp)
+
+            remainComp = nextComp
+        if len(remainComp) != 0:
+            failList = []
+            for key in self.allComp:
+                if isinstance(self.allComp[key], CompBase):
+                    if not self.allComp[key].IsInitialized():
+                        failList.append(failList)
+            self.LogW("組件未初始化:", failList)
 
     def _SetAllComponentEvnets(self):
         self.LogI(f"設定全部的組件事件:", [key for key in self.allComp])
@@ -103,19 +131,21 @@ class BotBase:
             if comp.HasEvent("on_raw_message_edit"):
                 self.allOnRawMessageEditObj.append(comp)
 
-    def LogI(self, *args,  **kwargs):
-        depth = 4
-        if "depth" in args:
+    def _GetLogDepth(self, **kwargs):
+        depth = BotBase.DEFAULT_LOG_DEPTH
+        if "depth" in kwargs:
             depth = kwargs["depth"]
             del kwargs["depth"]
-        Log.I(depth=depth, *args, **kwargs)
-        pass
+        return depth
+
+    def LogI(self, *args,  **kwargs):
+        Log.I(depth=self._GetLogDepth(**kwargs), *args, **kwargs)
 
     def LogW(self, *args, **kwargs):
-        Log.W(*args, **kwargs)
+        Log.W(depth=self._GetLogDepth(**kwargs), *args, **kwargs)
 
     def LogE(self, *args, **kwargs):
-        Log.E(*args, **kwargs)
+        Log.E(depth=self._GetLogDepth(**kwargs), *args, **kwargs)
 
     def GetComponent(self, key: str):
         if key in self.allComp:
@@ -133,7 +163,7 @@ class BotBase:
         for obj in self.allPreSecondObj:
             await obj.PreSecondEvent()
 
-# ------------------ discord 內建事件，給 botClient 呼叫的 ------------------
+# ------------------ 下面 discord 內建事件，給 botClient 呼叫的 ------------------
 
     async def on_ready(self) -> None:
         self.LogI('目前登入身份:', self.botClient.user)
@@ -192,3 +222,5 @@ class BotBase:
                 await obj.on_raw_message_edit(payload)
             except Exception:
                 self.LogE(traceback.format_exc())
+
+# ------------------ 上面 discord 內建事件，給 botClient 呼叫的 ------------------
