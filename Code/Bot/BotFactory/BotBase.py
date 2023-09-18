@@ -147,6 +147,9 @@ class BotBase:
     def LogE(self, *args, **kwargs):
         Log.E(depth=self._GetLogDepth(**kwargs), *args, **kwargs)
 
+    def LogException(self, *args, **kwargs):
+        Log.E(depth=self._GetLogDepth(**kwargs) + 1, *args, **kwargs)
+
     def GetComponent(self, key: str):
         if key in self.allComp:
             return self.allComp[key]
@@ -154,6 +157,8 @@ class BotBase:
         return None
 
     def AddComponent(self, key: str, comp: CompBase):
+        if key in self.allComp:
+            self.LogW(f"{key} 已存在資料: ", self.allComp[key])
         self.allComp[key] = comp
 
     async def Start(self):
@@ -172,7 +177,7 @@ class BotBase:
             try:
                 await obj.on_ready()
             except Exception:
-                self.LogE(traceback.format_exc())
+                self.LogException(traceback.format_exc())
         self.isReady = True
 
     async def on_message(self, message: discord.Message) -> None:
@@ -182,7 +187,7 @@ class BotBase:
             try:
                 await obj.on_message(message)
             except Exception:
-                self.LogE(traceback.format_exc())
+                self.LogException(traceback.format_exc())
 
     # async def on_reaction_add(reaction, user) -> None:
     #     pass
@@ -194,7 +199,7 @@ class BotBase:
             try:
                 await obj.on_raw_reaction_add(payload)
             except Exception:
-                self.LogE(traceback.format_exc())
+                self.LogException(traceback.format_exc())
 
     async def on_message_delete(self, message: discord.Message):
         if not self.isReady:
@@ -203,7 +208,7 @@ class BotBase:
             try:
                 await obj.on_message_delete(message)
             except Exception:
-                self.LogE(traceback.format_exc())
+                self.LogException(traceback.format_exc())
 
     async def on_raw_message_delete(self, payload: discord.RawMessageDeleteEvent):
         if not self.isReady:
@@ -212,7 +217,7 @@ class BotBase:
             try:
                 await obj.on_raw_message_delete(payload)
             except Exception:
-                self.LogE(traceback.format_exc())
+                self.LogException(traceback.format_exc())
 
     async def on_raw_message_edit(self, payload: discord.RawMessageUpdateEvent):
         if not self.isReady:
@@ -221,6 +226,6 @@ class BotBase:
             try:
                 await obj.on_raw_message_edit(payload)
             except Exception:
-                self.LogE(traceback.format_exc())
+                self.LogException(traceback.format_exc())
 
 # ------------------ 上面 discord 內建事件，給 botClient 呼叫的 ------------------
