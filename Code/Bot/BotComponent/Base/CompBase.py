@@ -31,12 +31,15 @@ class CompBase:
         return self.isInitailized
 
     def HasEvent(self, key):
-        result = (key in self.allEvent) and self.allEvent[key]
-        if result:
-            invert_op = getattr(self, key, None)
-            if not callable(invert_op):
+        value = (key in self.allEvent) and self.allEvent[key]
+        invert_op = getattr(self, key, None)
+        func = callable(invert_op)
+        if value ^ func:
+            if value:
                 self.LogW("找不到函式:", key, self)
-        return result
+            else:
+                self.LogW("定義函式卻未使用:", key, self)
+        return value
 
     def _GetLogDepth(self, **kwargs):
         depth = CompBase.DEFAULT_LOG_DEPTH
