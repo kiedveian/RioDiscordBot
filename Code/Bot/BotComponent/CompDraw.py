@@ -170,18 +170,9 @@ class CompDraw(CompBotBase):
         await item.Reply(message)
         self._SendDbLog(item=item, message=message)
         if item.IsTicket():
-            await self.compUsers.AddTicket(message.author, 1)
+            self.compUsers.AddTicket(message.author, 1)
         elif item.IsBlockHouse():
-            if message.author.id == self.botSettings.closeBossId:
-                await message.reply("不知道怎麼處理，當機了……", mention_author=False)
-            else:
-                deltaTime = datetime.timedelta(minutes=3)
-                users = users = [message.author]
-                timeDatas = self.compClose.GetMemberTotalTime(deltaTime, users)
-                await self.compClose.CloseMembers(timeDatas, CloseType.DRAW)
-                replyMsg = self.compClose.GetReplyCloseMessage(
-                    deltaTime, users)
-                await message.channel.send(replyMsg)
+            await self.compClose.CloseByDraw(message)
 
 
 # ------------------ 下面為管理員身份功能 ------------------
@@ -203,7 +194,6 @@ class CompDraw(CompBotBase):
         if re.match("!drawtestid", message.content):
             await self._DrawTest(message, message.content[12:])
             return True
-
         return False
 
     async def _DrawCount(self, message: discord.message, paraMessage):
@@ -255,7 +245,8 @@ class CompDraw(CompBotBase):
                     await self.ProcessItem(message, item)
                 else:
                     await item.Reply(message)
-                break
+                return
+        await message.reply(f"找不到對應id {itemId}")
 
 # ------------------ 上面為管理員身份功能 ------------------
 

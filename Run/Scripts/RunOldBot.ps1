@@ -1,7 +1,10 @@
+$ErrorActionPreference = "Stop"
 
 $SOURCE_PATH = "D:\data\Git\RioTest\DiscordBot\"
-$BACKUP_PATH = "Bot\Run\Backup"
-$LASTEST_PATH = "Bot\Run\Lastest"
+$PROJECT_ROOT_PATH = "$PSScriptRoot\..\.."
+# $SOURCE_PATH = "$PROJECT_ROOT_PATH\Code\"
+$BACKUP_PATH = "$PROJECT_ROOT_PATH\Run\Backup"
+$LASTEST_PATH = "$PROJECT_ROOT_PATH\Run\Lastest"
 
 # 工具函式
 
@@ -35,22 +38,24 @@ function Copy-Rio-Source {
     Write-Debug $branch
     Write-Debug $time
 
-    $timeDirName = $time.ToString("yyyy-MMdd_hhmmss")
+    $timeDirName = $time.ToString("yyyy-MMdd_HHmmss")
     $backupPath = "$BACKUP_PATH\$branch\$timeDirName"
     $workPath = "$LASTEST_PATH\$branch"
     Remove-Rio-Item $workPath -Recurse
-    New-Rio-Folder $workPath
-    New-Rio-Folder $backupPath
+    # $msg = New-Rio-Folder $workPath
+    # $msg = New-Rio-Folder $backupPath
 
     $folderList = "BotComponent", "BotMain", "Utility"
     $fileList = "DiscordBotEnter.py", ".env"
+    # $folderList = "Bot", "Utility"
+    # $fileList = "BotMain.py", ".env"
     foreach ($folder in $folderList) {
         Copy-Item "$SOURCE_PATH\$folder\" -Destination "$workPath\$folder\" -Recurse
     }
     foreach ($filename in $fileList) {
         Copy-Item "$SOURCE_PATH\$filename" -Destination "$workPath\$filename"
     }
-    Copy-Item "$workPath\*" -Destination $backupPath
+    Copy-Item "$workPath\" -Destination "$backupPath\" -Recurse
 
     # New-Item -Path $lastestPath -Name $dirName -ItemType Directory
     # $todayDate = Get-Date
@@ -73,13 +78,16 @@ $currentTime = Get-Date
 Copy-Rio-Source test $currentTime
 # $specificDate = [datetime]"2023-04-02"
 
-Get-Location
+# Get-Location
 Push-Location "$PSScriptRoot\..\Lastest\$branch"
-Get-Location
+# Get-Location
 
 # $PSCommandPath
 
-
-python .\DiscordBotEnter.py $branch $sql
-
-Pop-Location
+try {
+    python .\DiscordBotEnter.py $branch $sql
+    # python .\BotMain.py $branch $sql
+}
+finally {
+    Pop-Location
+}

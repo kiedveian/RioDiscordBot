@@ -5,6 +5,7 @@ import re
 import threading
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.BotComponent.CompUsers import CompUsers
 
 CLOSE_REFLECTION_SHIFT = 1000
 EMPTY_DURATION = datetime.timedelta()
@@ -48,6 +49,12 @@ class CompClose(CompBotBase):
     closeTimeLock: threading.Lock = None
 
     updateCloseTimeString = ""
+    compUsers: CompUsers = None
+
+    def SetComponents(self, bot):
+        super().SetComponents(bot)
+        self.compUsers = bot.GetComponent("compUsers")
+        return
 
     def Initial(self) -> bool:
         if not super().Initial():
@@ -60,7 +67,7 @@ class CompClose(CompBotBase):
         self.closeTimeLock = threading.Lock()
 
         self.updateCloseTimeString = (f"CALL update_close_time_{self.botSettings.sqlPostfix} "
-                                      " (%s, %s, %s, %s)")
+                                      " (%s, %s, %s, %s, %s, %s, %s)")
 
         self.UpdateReleaseTime()
 
@@ -209,6 +216,9 @@ class CompClose(CompBotBase):
         roleIds = [member.id for member in closeRole.members]
         sqlUpdateValues = []
         self.closeTimeLock.acquire()  # 上鎖
+        isReflectionInt = 0
+        if closeData.isReflection:
+            isReflectionInt = 1
         for member in closeData.totalTimeDatas:
             deltaTime = closeData.totalTimeDatas[member]
             if member.id in roleIds:
@@ -222,8 +232,9 @@ class CompClose(CompBotBase):
                 self.LogI(f"笨蛋關時間 {member} {deltaTime}")
                 endTime = nowTime + deltaTime
                 self.cacheReleaseTime[member.id] = endTime
+            totalSeconds = int(deltaTime.total_seconds())
             sqlUpdateValues.append(
-                [member.id, nowTime, endTime, member.display_name])
+                [member.id, nowTime, endTime, member.display_name, closeData.closeType, totalSeconds, isReflectionInt])
         self.closeTimeLock.release()  # 解鎖
         self.sql.SimpleCommandMany(self.updateCloseTimeString, sqlUpdateValues)
 
@@ -257,7 +268,16 @@ class CompClose(CompBotBase):
             return
         message = await self.botClient.FetchChannelMessage(payload.channel_id, payload.message_id)
         if message == None:
-            return None
+            return
+        userString = ""
+        if closeType == CloseType.TICKET:
+            userString = f"{payload.member.display_name}({payload.member.name})"
+            if self.compUsers.GetTicketCount(payload.member.id) <= 0:
+                replyMsg = f"<@{payload.member.id}>({payload.member.name}) 沒有機票還想關人啊"
+                await message.channel.send(replyMsg)
+                return
+            self.compUsers.AddTicket(payload.member, -1)
+
         isReflection = self.CheckIsReflection(message.author)
         duration = datetime.timedelta(minutes=3)
         totalTimeDatas = {}
@@ -270,9 +290,6 @@ class CompClose(CompBotBase):
         else:
             totalTimeDatas = self.GetMemberTotalTime(
                 duration, users=[message.author])
-        userString = ""
-        if closeType == CloseType.TICKET:
-            userString = f"{payload.member.display_name}({payload.member.name})"
         closeData = CloseData()
         closeData.closeType = closeType
         closeData.message = message
@@ -298,3 +315,15 @@ class CompClose(CompBotBase):
 
 
 # ------------------ 上面為各種事件，給 botClient 呼叫的 ------------------
+
+    async def CloseByDraw(self, message: discord.Message):
+        duration = datetime.timedelta(minutes=3)
+        totalTimeDatas = self.GetMemberTotalTime(
+            duration, users=[message.author])
+        closeData = CloseData()
+        closeData.closeType = CloseType.DRAW
+        closeData.message = message
+        closeData.isReflection = False
+        closeData.totalTimeDatas = totalTimeDatas
+        await self.CloseEvent(closeData)
+

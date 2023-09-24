@@ -1,8 +1,18 @@
-D:\data\Git\Discord\Bot>
-.\Run\Scripts\RunTools.ps1 file2sql test 1 ../Files/draw.tsv
+啟動工具
+D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test 1 ../Files/draw.tsv
 
+舊式啟動機員人
 PS D:\data\Git\RioTest\DiscordBot> python .\DiscordBotEnter.py nerolirain nerolirain
+PS D:\data\Git\RioTest\DiscordBot> python .\DiscordBotEnter.py nerolirain nerolirain
+新式啟動機器人
+latest版本 
+d:\data\Git\Discord\Bot\Run\Scripts\RunBotLatest.ps1 test test
+d:\data\Git\Discord\Bot\Run\Scripts\RunTestBotLatest.ps1
+d:\data\Git\Discord\Bot\Run\Scripts\RunNerolirainBotLatest.ps1
+backup版本，需確認Files相關路徑
+PS D:\data\Git\Discord\Bot\Run\Backup\test\2023-0924_163604> python BotMain.py test test
 
+啟動Wbe後台
 PS D:\data\Git\Discord\Bot\Web\Django\nerolirain> python manage.py runserver
 PS D:\data\Git\Discord\Bot\Web\Django\nerolirain> python manage.py runserver 0.0.0.0:2337
 

@@ -37,9 +37,9 @@ def MyMain(argv):
     global g_bot
     AddLogToScreen()
     timeString = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    AddLogToFile(f"Files/logs/{timeString}.log")
     postfix = argv[1]
     botName = argv[2]
+    AddLogToFile(f"../Files/logs/{botName}-{postfix}_{timeString}.log")
 
     Log.I(f"sql postfix: {postfix}")
 
