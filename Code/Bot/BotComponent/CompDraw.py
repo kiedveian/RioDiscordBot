@@ -73,6 +73,7 @@ class CompDraw(CompBotBase):
         global SELECT_ITEM_STRING
         global SELECT_ALARM_STRING
         global UPDATE_ALARM_MESSAGE
+        # TODO string 改 member data
 
         self.allEvent["on_message"] = True
         self.allEvent["PreSecondEvent"] = True
@@ -287,7 +288,7 @@ class CompDraw(CompBotBase):
         alarmList = []
         for user_id in self.drawAlarmMessages:
             if self.compUsers.CanDraw(user_id):
-                message = await self.botClient.GetMorningChannel().fetch_message(self.drawAlarmMessages[user_id])
+                message = await self.botClient.FetchChannelMessage(self.botSettings.morningChannelId, self.drawAlarmMessages[user_id])
                 if message != None:
                     alarmList.append(user_id)
                     await message.reply("可以抽了")

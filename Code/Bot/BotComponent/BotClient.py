@@ -40,6 +40,32 @@ class BotClient(discord.Client):
                 self.LogE("找不到對應主伺服器: ", guild)
         return self.cacheGuild
 
+    def GetChannel(self, channelId) -> (discord.abc.GuildChannel | None):
+        guild = self.GetGuild()
+        if guild != None:
+            return guild.get_channel(channelId)
+        return None
+
+    def GetCloseChannel(self) -> discord.TextChannel:
+        if self.cacheCloseChannel == None:
+            self.cacheCloseChannel = self.GetChannel(
+                self.botSettings.closeChannelId)
+        return self.cacheCloseChannel
+
+    def GetCloseRole(self) -> discord.Role:
+        if self.cacheCloseRole == None:
+            guild = self.GetGuild()
+            if guild != None:
+                self.cacheCloseRole = guild.get_role(
+                    self.botSettings.closeRoleId)
+        return self.cacheCloseRole
+
+    async def FetchChannelMessage(self, channelId: int, messageId: int):
+        channel = self.get_channel(channelId)
+        if channel == None:
+            return None
+        return await channel.fetch_message(messageId)
+
     def _GetLogDepth(self, **kwargs):
         depth = BotClient.DEFAULT_LOG_DEPTH
         if "depth" in kwargs:
