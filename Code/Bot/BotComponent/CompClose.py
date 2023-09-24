@@ -110,6 +110,26 @@ class CompClose(CompBotBase):
             return CloseType.RIOT
         return CloseType.NOT_CLOSE
 
+    async def CheckRiotSuccessful(self, payload: discord.RawReactionActionEvent, message: discord.Message):
+        if message.created_at < self.botSettings.closeIgnoreTime:
+            return False
+        # if message.id in self.processMessage:
+        #     return False
+        for reaction in message.reactions:
+            if reaction.emoji != payload.emoji:
+                continue
+            if reaction.count < self.botSettings.closeReatcionCount:
+                continue
+            successful = True
+            async for user in reaction.users():
+                # avoid close again
+                if user == self.botClient.user:
+                    successful = False
+                    break
+            if successful:
+                return True
+        return False
+
     def GetCloseTimeByCommand(self, message: discord.Message):
         if message.author.id != self.botSettings.closeBossId:
             return None
@@ -269,6 +289,11 @@ class CompClose(CompBotBase):
         message = await self.botClient.FetchChannelMessage(payload.channel_id, payload.message_id)
         if message == None:
             return
+        isReflection = self.CheckIsReflection(message.author)
+        if not isReflection and closeType == CloseType.RIOT:
+            if not await self.CheckRiotSuccessful(payload, message):
+                return
+
         userString = ""
         if closeType == CloseType.TICKET:
             userString = f"{payload.member.display_name}({payload.member.name})"
@@ -278,7 +303,6 @@ class CompClose(CompBotBase):
                 return
             self.compUsers.AddTicket(payload.member, -1)
 
-        isReflection = self.CheckIsReflection(message.author)
         duration = datetime.timedelta(minutes=3)
         totalTimeDatas = {}
         if isReflection:
@@ -290,6 +314,8 @@ class CompClose(CompBotBase):
         else:
             totalTimeDatas = self.GetMemberTotalTime(
                 duration, users=[message.author])
+        if closeType == CloseType.RIOT:
+            await message.add_reaction(payload.emoji)
         closeData = CloseData()
         closeData.closeType = closeType
         closeData.message = message
@@ -316,6 +342,7 @@ class CompClose(CompBotBase):
 
 # ------------------ 上面為各種事件，給 botClient 呼叫的 ------------------
 
+
     async def CloseByDraw(self, message: discord.Message):
         duration = datetime.timedelta(minutes=3)
         totalTimeDatas = self.GetMemberTotalTime(
@@ -326,4 +353,3 @@ class CompClose(CompBotBase):
         closeData.isReflection = False
         closeData.totalTimeDatas = totalTimeDatas
         await self.CloseEvent(closeData)
-
