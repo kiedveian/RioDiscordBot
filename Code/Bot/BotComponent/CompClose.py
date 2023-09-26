@@ -200,6 +200,8 @@ class CompClose(CompBotBase):
 
     def GetSendStringList(self, closeData: CloseData):
         if len(closeData.totalTimeDatas) == 0:
+            self.LogI(closeData.closeType)
+            self.LogI(closeData.message)
             return ["當機了！！！"]
         sendList = []
         if closeData.isReflection:

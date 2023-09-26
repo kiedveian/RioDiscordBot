@@ -18,10 +18,6 @@ DRAW_END_TIME = datetime.datetime(2300, 1, 1)
 DRAW_TICKET_ID = 1
 DRAW_BLACK_HOUSE_ID = 47
 
-SELECT_ITEM_STRING = ""
-SELECT_ALARM_STRING = ""
-UPDATE_ALARM_MESSAGE = ""
-
 
 class DrawItem:
 
@@ -38,12 +34,6 @@ class DrawItem:
         embed.set_image(url=self.image)
         await message.reply(embed=embed, mention_author=False)
 
-    def CurrentDurning(self, refTime: datetime.datetime, maxSize: int = 10):
-        if self.festival == None or len(self.festival) == 0:
-            return [[DRAW_START_TIME, DRAW_END_TIME]]
-        # TODO 分析節慶
-        return []
-
     def IsTicket(self):
         return self.id == DRAW_TICKET_ID
 
@@ -56,6 +46,10 @@ class CompDraw(CompBotBase):
     allItems = []
     currentItems = []
     disableItems = []
+    selectItemString: str = None
+    selectAlarmString: str = None
+    updateAlarmMessage: str = None
+    nextUpdateTime: datetime.datetime = None
 
     drawAlarmMessages = {}
     compUsers: CompUsers = None
@@ -70,16 +64,13 @@ class CompDraw(CompBotBase):
         if not super().Initial():
             return False
 
-        global SELECT_ITEM_STRING
-        global SELECT_ALARM_STRING
-        global UPDATE_ALARM_MESSAGE
-        # TODO string 改 member data
-
         self.allEvent["on_message"] = True
         self.allEvent["PreSecondEvent"] = True
-        SELECT_ITEM_STRING = f"SELECT item_id, name, weight, message, image, festival, festival_hint FROM draw_item_{self.botSettings.sqlPostfix} where weight != 0"
-        SELECT_ALARM_STRING = f"SELECT user_id, draw_alarm_message FROM user_data_{self.botSettings.sqlPostfix} WHERE draw_alarm_message != 0"
-        UPDATE_ALARM_MESSAGE = f"UPDATE user_data_{self.botSettings.sqlPostfix} SET draw_alarm_message = %s WHERE user_id = %s"
+        self.selectItemString = f"SELECT item_id, name, weight, message, image, festival, festival_hint FROM draw_item_{self.botSettings.sqlPostfix} where weight != 0"
+        self.selectAlarmString = f"SELECT user_id, draw_alarm_message FROM user_data_{self.botSettings.sqlPostfix} WHERE draw_alarm_message != 0"
+        self.updateAlarmMessage = f"UPDATE user_data_{self.botSettings.sqlPostfix} SET draw_alarm_message = %s WHERE user_id = %s"
+        self.nextUpdateTime = DRAW_END_TIME
+
         self.LoadItems()
         self.LoadAlarmMessages()
 
@@ -94,28 +85,62 @@ class CompDraw(CompBotBase):
         item.festival = rowData[5]
         item.festival_hint = rowData[6]
 
+    def CreateMonthDuration(self, nowTime: datetime.datetime, diffMonth: int, maxSize: int):
+        if diffMonth < 0:
+            diffMonth += 12
+
+        endMonth = nowTime.month + diffMonth
+        endMonthYear = nowTime.year
+        if endMonth > 12:
+            endMonth -= 12
+            endMonthYear += 1
+        startMonth = endMonth - 1
+        startMonthYear = endMonthYear
+
+        result = []
+        for diffYears in range(maxSize):
+            result.append([datetime.datetime(year=startMonthYear+diffYears, month=startMonth, day=1),
+                          datetime.datetime(year=endMonthYear+diffYears, month=endMonth, day=1)])
+        return result
+
+    def ComputeDurning(self, item: DrawItem, nowTime: datetime.datetime, maxSize: int = 10):
+        if item.festival == None or len(item.festival) == 0:
+            return [[DRAW_START_TIME, DRAW_END_TIME]]
+        allNubmers = re.findall('[0-9]+', item.festival)
+        if item.festival.find("月份"):
+            if len(allNubmers) == 1:
+                month = int(allNubmers[0])
+                return self.CreateMonthDuration(nowTime, month - nowTime.month, 1)
+        self.LogW("無法解析節慶")
+        return []
+
     def LoadItems(self):
         global DRAW_TICKET_ID
         global DRAW_BLACK_HOUSE_ID
-        command = SELECT_ITEM_STRING
+        command = self.selectItemString
         drawData = self.sql.SimpleSelect(command)
         allItems = []
         currentItems = []
         disableItems = []
         weightSum = 0
-        nowTime = datetime.datetime.utcnow()
+        nowTime = datetime.datetime.now()
         for drawRow in drawData:
             item = DrawItem()
             self.SetItem(item, drawRow)
             allItems.append(item)
             disable = True
             if item.weight >= 0:
-                durnings = item.CurrentDurning(nowTime)
+                durnings = self.ComputeDurning(item, nowTime)
                 if len(durnings) > 0:
                     if durnings[0][0] < nowTime and nowTime < durnings[0][1]:
                         weightSum += item.weight
                         currentItems.append(item)
                         disable = False
+                        if durnings[0][1] < self.nextUpdateTime:
+                            self.nextUpdateTime = durnings[0][1]
+                    else:
+                        if durnings[0][0] < self.nextUpdateTime:
+                            self.nextUpdateTime = durnings[0][0]
             if disable:
                 disableItems.append(item)
 
@@ -132,9 +157,11 @@ class CompDraw(CompBotBase):
         self.disableItems = disableItems
 
         self.LogI(f"機票id:{DRAW_TICKET_ID},小黑屋id:{DRAW_BLACK_HOUSE_ID}")
+        self.LogI(f"當期卡池數:{len(currentItems)} 總權重:{weightSum}")
+        self.LogI(f"下次更新抽卡池時間:{self.nextUpdateTime}")
 
     def LoadAlarmMessages(self):
-        command = SELECT_ALARM_STRING
+        command = self.selectAlarmString
         userDatas = self.sql.SimpleSelect(command)
         alarmDatas = {}
         for rowData in userDatas:
@@ -142,7 +169,8 @@ class CompDraw(CompBotBase):
         self.drawAlarmMessages = alarmDatas
 
     def _SendDbLog(self, item: DrawItem, message: discord.Message):
-        self.LogI("send db log")
+        self.LogI(f"%s(%s)抽到 {item.name}({item.id})" %
+                  (message.author.display_name, message.author.name))
 
     def GetDrawItem(self, rand=None):
         # TODO lock
@@ -156,6 +184,9 @@ class CompDraw(CompBotBase):
         return None
 
     async def Draw(self, message: discord.Message):
+        nowTime = datetime.datetime.now()
+        if nowTime < self.nextUpdateTime:
+            self.LoadItems()
         if self.weightSum <= 0 or len(self.currentItems) == 0:
             self.LogE("Draw data error")
             return
@@ -176,7 +207,6 @@ class CompDraw(CompBotBase):
 
 
 # ------------------ 下面為管理員身份功能 ------------------
-
 
     async def _TryAdminCommand(self, message: discord.Message) -> bool:
         if message.channel.id != self.botSettings.drawAdminChannel:
@@ -253,6 +283,7 @@ class CompDraw(CompBotBase):
 
 # ------------------ 下面為各種事件，給 botClient 呼叫的 ------------------
 
+
     async def on_message(self, message: discord.Message) -> None:
         if await self._TryAdminCommand(message):
             return
@@ -261,13 +292,12 @@ class CompDraw(CompBotBase):
             return
         if re.match("!morning", message.content):
             if self.compUsers.CanDraw(message.author.id):
-                # TODO lock
                 newTime = datetime.datetime.now() + datetime.timedelta(hours=12)
                 self.compUsers.UpdateDrawTime(message.author, newTime)
                 if message.author.id in self.botSettings.morningTimeUserList:
                     self.drawAlarmMessages[message.author.id] = message.id
                     self.sql.SimpleCommand(
-                        UPDATE_ALARM_MESSAGE, (message.id, message.author.id))
+                        self.updateAlarmMessage, (message.id, message.author.id))
                 await self.Draw(message=message)
             else:
                 drawTime = self.compUsers.GetDrawTime(message.author.id)
@@ -275,7 +305,6 @@ class CompDraw(CompBotBase):
                 await message.reply(f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽", mention_author=False)
 
     async def PreSecondEvent(self):
-        # TODO lock
         alarmList = []
         for user_id in self.drawAlarmMessages:
             if self.compUsers.CanDraw(user_id):
@@ -283,7 +312,8 @@ class CompDraw(CompBotBase):
                 if message != None:
                     alarmList.append(user_id)
                     await message.reply("可以抽了")
-                    self.sql.SimpleCommand(UPDATE_ALARM_MESSAGE, (0, user_id))
+                    self.sql.SimpleCommand(
+                        self.updateAlarmMessage, (0, user_id))
 
         for user_id in alarmList:
             del self.drawAlarmMessages[user_id]
