@@ -1,15 +1,24 @@
 
 import datetime
 import os
-from typing import Any, Mapping, Optional, Type, Union
+from typing import Any, Dict, Mapping, Optional, Type, Union
 from django.forms.utils import ErrorList
 from django.views.generic import TemplateView
 from django import forms
+from django.db import models
 
 from Utility.MysqlManager import MysqlManager
 
 
 NEROLIRAIN_GUILD_ID = 824892342455500800
+
+FORM_TIME_FORMAT = "%Y-%m-%dT%H:%M"
+SQL_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+ALL_TIME_START = datetime.datetime(2000, 1, 1).strftime(FORM_TIME_FORMAT)
+ALL_TIME_END = datetime.datetime(
+    2099, 12, 31, 23, 59, 59).strftime(FORM_TIME_FORMAT)
+LOCAL_TO_UTC_SHIFT_TIME = datetime.timedelta(hours=-8)
+
 
 CHOICES_ONLY_GUILD = (
     ("0", "顯示"),
@@ -26,11 +35,27 @@ CHOICES_REMOVE_EXPIRED = (
     ("0", "顯示"),
 )
 
+SELECT_DATETIME_ALL = "任意時間"
+SELECT_DATETIME_NEAREST_WEEK = "最近一週"
+SELECT_DATETIME_NEAREST_30DAYS = "最近30天"
+SELECT_DATETIME_CUSTOM = "自訂時間"
+SELECT_BUTTON_LIST = [SELECT_DATETIME_ALL, SELECT_DATETIME_NEAREST_WEEK, 
+                      SELECT_DATETIME_NEAREST_30DAYS, SELECT_DATETIME_CUSTOM]
+
+
+def bool2string(data):
+    if data:
+        return "1"
+    return "0"
+
 
 class FormParams:
     onlyGuild: bool = False
     orderDesc: bool = True
     removeExpired: bool = True
+    startTime: str = ALL_TIME_START
+    endTime: str = ALL_TIME_END
+    timeRange: str = "全部"
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
@@ -45,14 +70,52 @@ class FormParams:
             self.orderDesc = get_request['orderChoice'] == "1"
         if 'removeExpired' in get_request:
             self.removeExpired = get_request['removeExpired'] == "1"
+        if 'timeRange' in get_request:
+            submit = get_request['timeRange']
+            self.timeRange = submit
+            if submit == SELECT_DATETIME_ALL:
+                self.startTime = ALL_TIME_START
+                self.endTime = ALL_TIME_END
+            elif submit == SELECT_DATETIME_NEAREST_WEEK:
+                now = datetime.datetime.now()
+                startTime = now + datetime.timedelta(days=-7)
+                self.startTime = startTime.strftime(FORM_TIME_FORMAT)
+                self.endTime = now.strftime(FORM_TIME_FORMAT)
+            elif submit == SELECT_DATETIME_NEAREST_30DAYS:
+                now = datetime.datetime.now()
+                startTime = now + datetime.timedelta(days=-30)
+                self.startTime = startTime.strftime(FORM_TIME_FORMAT)
+                self.endTime = now.strftime(FORM_TIME_FORMAT)
+            elif submit == SELECT_DATETIME_CUSTOM:
+                if 'startTime' in get_request:
+                    self.startTime = get_request['startTime']
+                if 'endTime' in get_request:
+                    self.endTime = get_request['endTime']
 
 
-class TestForm(forms.Form):
-    onlyGuildChoice = forms.ChoiceField(
-        label="非森林的貼圖", choices=CHOICES_ONLY_GUILD)
-    orderChoice = forms.ChoiceField(label="排序", choices=CHOICES_ORDER_DESC)
-    removeExpired = forms.ChoiceField(
-        label="過期貼圖", choices=CHOICES_REMOVE_EXPIRED)
+class FormModel(models.Model):
+    pass
+
+
+class SelectForm(forms.ModelForm):
+    class Meta:
+        model = FormModel
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        formParams = FormParams()
+        if "formParams" in kwargs:
+            formParams = kwargs.pop("formParams")
+
+        super().__init__(*args, **kwargs)
+
+        self.fields.update({
+            'onlyGuildChoice': forms.ChoiceField(choices=CHOICES_ONLY_GUILD, initial=bool2string(formParams.onlyGuild)),
+            'orderChoice': forms.ChoiceField(choices=CHOICES_ORDER_DESC, initial=bool2string(formParams.orderDesc)),
+            'removeExpired': forms.ChoiceField(choices=CHOICES_REMOVE_EXPIRED, initial=bool2string(formParams.removeExpired)),
+            'startTime': forms.DateTimeField(widget=forms.DateTimeInput(format=FORM_TIME_FORMAT, attrs={'type': 'datetime-local', 'value': formParams.startTime})),
+            'endTime': forms.DateTimeField(widget=forms.DateTimeInput(format=FORM_TIME_FORMAT, attrs={'type': 'datetime-local', 'value': formParams.endTime})),
+        })
 
 
 class MemberData:
@@ -113,9 +176,6 @@ class StickerItem:
 
 
 class StickerPageView(TemplateView):
-
-    template_name = "sticker1.html"
-
     formParams: FormParams = None
     botUpdateTime: datetime.datetime = None
     sql: MysqlManager = None
@@ -181,8 +241,29 @@ class StickerPageView(TemplateView):
 
     def GetDatas(self, formParams: FormParams):
 
+        whereString = ""
+        if formParams.startTime != ALL_TIME_START:
+            startTime = datetime.datetime.strptime(
+                formParams.startTime, FORM_TIME_FORMAT)
+            startTime += LOCAL_TO_UTC_SHIFT_TIME
+            startTimeString = startTime.strftime(SQL_TIME_FORMAT)
+            whereString = f'WHERE create_time >= "{startTimeString}"'
+
+        if formParams.endTime != ALL_TIME_END:
+            if len(whereString) == 0:
+                whereString = f"WHERE "
+            else:
+                whereString += " AND "
+            endTime = datetime.datetime.strptime(
+                formParams.endTime, FORM_TIME_FORMAT)
+            endTime += LOCAL_TO_UTC_SHIFT_TIME
+            endTime = endTime.replace(second=59)
+            endTimeString = endTime.strftime(SQL_TIME_FORMAT)
+            whereString += f' create_time <= "{endTimeString}"'
+
         dataCommand = (f"SELECT COUNT(0) AS `count`, `stk`.`name`, `log`.`sticker_id`, `log`.`member_nick`, `stk`.`check_time`"
                        f" FROM (`message_log_nerolirain` `log` JOIN `all_sticker` `stk` ON ((`log`.`sticker_id` = `stk`.`sticker_id`)))"
+                       f" {whereString}"
                        f" GROUP BY `log`.`sticker_id`, `log`.`member_id`")
 
         rowDatas = self.GetSql().SimpleSelect(dataCommand)
@@ -200,8 +281,11 @@ class StickerPageView(TemplateView):
                 trans_map[stk_id] = StickerItem()
             trans_map[stk_id].AddData(row)
 
+        # 補上 0 次的森林貼圖
         for stk_id in displayStickers:
             if stk_id > 0 and stk_id not in trans_map:
+                if displayStickers[stk_id][2] != NEROLIRAIN_GUILD_ID:
+                    continue
                 item = StickerItem()
                 item.id = stk_id
                 item.name = displayStickers[stk_id][1]
@@ -214,11 +298,6 @@ class StickerPageView(TemplateView):
             self.formParams.SetData(request.GET)
         return super().get(request, *args, **kwargs)
 
-    def bool2string(self, data):
-        if data:
-            return "1"
-        return "0"
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         self.UpdateBotUpdateTime()
@@ -226,9 +305,7 @@ class StickerPageView(TemplateView):
         timeString = self.botUpdateTime.strftime("%Y-%m-%d %H:%M:%S")
         context['bot_update_time'] = timeString
 
-        form = TestForm(initial={'onlyGuildChoice': self.bool2string(self.formParams.onlyGuild),
-                                 'orderChoice': self.bool2string(self.formParams.orderDesc),
-                                 'removeExpired': self.bool2string(self.formParams.removeExpired),
-                                 })
-        context['form'] = form
+        newForm = SelectForm(formParams=self.formParams)
+        context['form'] = newForm
+        context['botton_list'] = SELECT_BUTTON_LIST
         return context

@@ -1,15 +1,26 @@
-<!-- <h1>Homepage</h1> -->
-
 {% extends "base.html" %}
+
 
 {% block content %}
 
-<br />
+
 <form method="GET">
-    {{ form }}
-    <input type="submit" value="更新">
+    過期貼圖 {{form.removeExpired}} <br/>
+    非森林的貼圖 {{form.onlyGuildChoice}} <br/>
+    排序 {{form.orderChoice}} <br/>
+    開始時間 {{form.startTime}} <br/>
+    結束時間 {{form.endTime}} <br/>
+
+    {% for button_str in botton_list %}
+    <input type="submit" name="timeRange" value={{button_str}}>
+    {% endfor %}
+    <br/>
+    <br/>
+    過期貼圖更新時間：{{bot_update_time}} (萊傑啟動時間) <br/>
+
+
 </form>
-過期貼圖更新時間：{{bot_update_time}} (萊傑啟動時間)
+
 
 <table style="width: 600px; ">
     <tbody>
@@ -43,6 +54,4 @@
     </tbody>
 </table>
 
-
 {% endblock content %}
-<h1>Sticker 4</h1>
