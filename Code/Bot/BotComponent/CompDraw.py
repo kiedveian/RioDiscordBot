@@ -89,13 +89,17 @@ class CompDraw(CompBotBase):
         if diffMonth < 0:
             diffMonth += 12
 
-        endMonth = nowTime.month + diffMonth
-        endMonthYear = nowTime.year
+        startMonth = nowTime.month + diffMonth
+        startMonthYear = nowTime.year
+        if startMonth > 12:
+            startMonth -= 12
+            startMonthYear += 1
+
+        endMonth = startMonth + 1
+        endMonthYear = startMonthYear
         if endMonth > 12:
             endMonth -= 12
             endMonthYear += 1
-        startMonth = endMonth - 1
-        startMonthYear = endMonthYear
 
         result = []
         for diffYears in range(maxSize):
@@ -132,7 +136,7 @@ class CompDraw(CompBotBase):
             if item.weight >= 0:
                 durnings = self.ComputeDurning(item, nowTime)
                 if len(durnings) > 0:
-                    if durnings[0][0] < nowTime and nowTime < durnings[0][1]:
+                    if durnings[0][0] <= nowTime and nowTime <= durnings[0][1]:
                         weightSum += item.weight
                         currentItems.append(item)
                         disable = False
@@ -185,7 +189,7 @@ class CompDraw(CompBotBase):
 
     async def Draw(self, message: discord.Message):
         nowTime = datetime.datetime.now()
-        if nowTime < self.nextUpdateTime:
+        if self.nextUpdateTime < nowTime:
             self.LoadItems()
         if self.weightSum <= 0 or len(self.currentItems) == 0:
             self.LogE("Draw data error")
@@ -207,6 +211,7 @@ class CompDraw(CompBotBase):
 
 
 # ------------------ 下面為管理員身份功能 ------------------
+
 
     async def _TryAdminCommand(self, message: discord.Message) -> bool:
         if message.channel.id != self.botSettings.drawAdminChannel:
@@ -282,7 +287,6 @@ class CompDraw(CompBotBase):
 
 
 # ------------------ 下面為各種事件，給 botClient 呼叫的 ------------------
-
 
     async def on_message(self, message: discord.Message) -> None:
         if await self._TryAdminCommand(message):
