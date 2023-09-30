@@ -69,7 +69,6 @@ class CompDraw(CompBotBase):
         self.selectItemString = f"SELECT item_id, name, weight, message, image, festival, festival_hint FROM draw_item_{self.botSettings.sqlPostfix} where weight != 0"
         self.selectAlarmString = f"SELECT user_id, draw_alarm_message FROM user_data_{self.botSettings.sqlPostfix} WHERE draw_alarm_message != 0"
         self.updateAlarmMessage = f"UPDATE user_data_{self.botSettings.sqlPostfix} SET draw_alarm_message = %s WHERE user_id = %s"
-        self.nextUpdateTime = DRAW_END_TIME
 
         self.LoadItems()
         self.LoadAlarmMessages()
@@ -121,6 +120,7 @@ class CompDraw(CompBotBase):
     def LoadItems(self):
         global DRAW_TICKET_ID
         global DRAW_BLACK_HOUSE_ID
+        self.nextUpdateTime = DRAW_END_TIME
         command = self.selectItemString
         drawData = self.sql.SimpleSelect(command)
         allItems = []
