@@ -160,9 +160,9 @@ class CompDraw(CompBotBase):
         self.currentItems = currentItems
         self.disableItems = disableItems
 
-        self.LogI(f"機票id:{DRAW_TICKET_ID},小黑屋id:{DRAW_BLACK_HOUSE_ID}")
-        self.LogI(f"當期卡池數:{len(currentItems)} 總權重:{weightSum}")
-        self.LogI(f"下次更新抽卡池時間:{self.nextUpdateTime}")
+        self.LogI(f"機票id:{DRAW_TICKET_ID},小黑屋id:{DRAW_BLACK_HOUSE_ID}\n"
+                  f"當期卡池數:{len(currentItems)} 總權重:{weightSum}\n"
+                  f"下次更新抽卡池時間:{self.nextUpdateTime}")
 
     def LoadAlarmMessages(self):
         command = self.selectAlarmString

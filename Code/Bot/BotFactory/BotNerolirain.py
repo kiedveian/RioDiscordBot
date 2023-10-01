@@ -7,6 +7,7 @@ from Bot.BotComponent.CompUpdateDatabase import CompUpdateDatabase
 from Bot.BotComponent.CompSnipe import CompSnipe
 from Bot.BotComponent.CompClose import CompClose
 from Bot.BotComponent.CompDraw import CompDraw
+from Bot.BotComponent.CompSystem import CompSystem
 
 
 class BotNerolirain(BotBase):
@@ -20,3 +21,4 @@ class BotNerolirain(BotBase):
         self.AddComponent("compSnipe", CompSnipe())
         self.AddComponent("compDraw", CompDraw())
         self.AddComponent("compClose", CompClose())
+        self.AddComponent("compSystem", CompSystem())
