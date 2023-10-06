@@ -8,6 +8,7 @@ from Bot.BotComponent.CompSnipe import CompSnipe
 from Bot.BotComponent.CompClose import CompClose
 from Bot.BotComponent.CompDraw import CompDraw
 from Bot.BotComponent.CompSystem import CompSystem
+from Bot.BotComponent.CompIdiom import CompIdiom
 
 
 class BotNerolirain(BotBase):
@@ -22,3 +23,4 @@ class BotNerolirain(BotBase):
         self.AddComponent("compDraw", CompDraw())
         self.AddComponent("compClose", CompClose())
         self.AddComponent("compSystem", CompSystem())
+        self.AddComponent("compIdiom", CompIdiom())

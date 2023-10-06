@@ -10,14 +10,18 @@ from Utility.MysqlManager import MysqlManager
 
 DRAW_DATA = ["item_id", "weight", "name", "message",
              "image", "festival", "festival_hint"]
+IDIOM_DATA = ["idiom", "comment"]
 DRAW_CHECK_LIST = [0, 2]
+IDIOM_CHECK_LIST = [0]
+DRAW_DB_PREFIX = "draw_item_"
+IDIOM_DB_PREFIX = "idiom_item_"
 
 
 class DataType:
     DRAW = 1
 
 
-def File2Mysql(filePath, tablePostfix, refData, checkList):
+def File2Mysql(filePath, tablePostfix, refData, checkList, dbPrefix):
     with open(filePath, "r", encoding="utf-8") as file:
         sqlArr = []
         count = 0
@@ -42,7 +46,7 @@ def File2Mysql(filePath, tablePostfix, refData, checkList):
         valueString = "%s"
         for index in range(len(refData)-1):
             valueString += " ,%s"
-        command = (f"INSERT INTO discord_bot.draw_item_{tablePostfix}"
+        command = (f"INSERT INTO discord_bot.{dbPrefix}{tablePostfix}"
                    f"({keyString})"
                    f"VALUES ({valueString})")
         sql = MysqlManager(
@@ -86,19 +90,18 @@ if __name__ == '__main__':
             case 1:
                 refData = DRAW_DATA
                 checkList = DRAW_CHECK_LIST
+                dbPrefix = DRAW_DB_PREFIX
+            case 2:
+                refData = IDIOM_DATA
+                checkList = IDIOM_CHECK_LIST
+                dbPrefix = IDIOM_DB_PREFIX
             case _:
                 print("資料類別有誤")
                 ok = False
 
-    # filename = "../Files/draw/抽抽 - 工作表1.tsv"
-    # filePath = "Files/sql/draw/20230821.tsv"
-    # filePath = "../../../Files/sql/draw/20230821.tsv"
-    # dataType = 1
-    # tablePostfix = "test"
-
     if ok:
         try:
-            File2Mysql(filePath, tablePostfix, refData, checkList)
+            File2Mysql(filePath, tablePostfix, refData, checkList, dbPrefix)
         except Exception:
             print(traceback.format_exc())
         print("檔案輸入資料庫完成")

@@ -1,5 +1,6 @@
 
 
+import datetime
 import random
 import re
 
@@ -16,15 +17,28 @@ class IdiomItem():
 NICK_SIGN = "的"
 
 
+class IdiomLog():
+    user_id: int
+    old_nick: str
+    idiom: str
+    logTime: datetime.datetime
+    nextTime: datetime.datetime
+
+
 class CompIdiom(CompBotBase):
     allItems = []
+    allLogs = {}
+    cooldownDelta: datetime.timedelta = None
 
     def Initial(self) -> bool:
         if not super().Initial():
             return False
 
         self.allEvent["on_message"] = True
+        self.cooldownDelta = datetime.timedelta(
+            seconds=self.botSettings.idiomCooldownSecond)
         self.LoadItems()
+        self.LoadLogs()
         return True
 
     def SetItem(self, item: IdiomItem, rowData):
@@ -40,9 +54,25 @@ class CompIdiom(CompBotBase):
             self.SetItem(item, rowData)
             allItems.append(item)
 
-        # # TODO lock
-        # self.weightSum = weightSum
+        # TODO lock
         self.allItems = allItems
+        self.LogI(f"成語總數:{len(allItems)}")
+
+    def LoadLogs(self):
+        command = (f"SELECT user_id, old_nick, idiom, MAX(log_time) as logtime "
+                   f" FROM idiom_log_{self.botSettings.sqlPostfix} group by user_id")
+        selectData = self.sql.SimpleSelect(command)
+        allLogs = {}
+        for rowData in selectData:
+            log = IdiomLog()
+            log.user_id = rowData[0]
+            log.old_nick = rowData[1]
+            log.idiom = rowData[2]
+            log.logTime = rowData[3]
+            log.nextTime = log.logTime + self.cooldownDelta
+            allLogs[log.user_id] = log
+        # TODO lock
+        self.allLogs = allLogs
 
     def GetRandomItem(self) -> IdiomItem:
         if len(self.allItems) <= 0:
@@ -64,41 +94,50 @@ class CompIdiom(CompBotBase):
                 if member.id == message.guild.owner.id:
                     self.LogI("擁有者不能改名")
                 else:
-                    self.SendNickLog(member, item)
+                    self.UpdateNickLog(member, item)
                     await member.edit(nick=newNick)
-            await message.reply(f'萊傑請示成語大師的結果為：{item.idiom}', mention_author=False)
+            await message.reply(f'萊傑請示橙雨大師的結果為：{item.idiom}', mention_author=False)
 
-    def SendNickLog(self, member: discord.Member, item: IdiomItem):
+    def UpdateNickLog(self, member: discord.Member, item: IdiomItem):
+        log = IdiomLog()
+        log.user_id = member.id
+        log.old_nick = member.display_name
+        log.idiom = item.idiom
+        log.logTime = datetime.datetime.now()
+        log.nextTime = log.logTime + self.cooldownDelta
+        self.allLogs[member.id] = log
         command = (f"INSERT INTO idiom_log_{self.botSettings.sqlPostfix}"
                    "(user_id, old_nick, idiom)"
                    "VALUES (%s, %s, %s);")
-        self.sql.SimpleCommand(
-            command, (member.id, member.display_name, item.idiom))
+        self.sql.SimpleCommand(command, (log.user_id, log.old_nick, log.idiom))
 
     def GetNewNick(self, member: discord.Member, item: IdiomItem):
-        command = (f"SELECT idiom FROM idiom_log_{self.botSettings.sqlPostfix} "
-                   f"WHERE user_id = %s ORDER BY no DESC LIMIT 1;")
-        selectData = self.sql.SimpleSelect(command, member.id)
         removeIdiom = member.display_name
-        if len(selectData) > 0:
-            oldIdiom = selectData[0][0]
+        if member.id in self.allLogs:
+            log = self.allLogs[member.id]
+            oldIdiom = log.idiom
             preFix = oldIdiom+NICK_SIGN
             if re.match(preFix, member.display_name):
                 removeIdiom = member.display_name[len(preFix):]
         return item.idiom + NICK_SIGN + removeIdiom
 
     async def on_message(self, message: discord.Message) -> None:
-        if message.channel.id == self.botSettings.drawAdminChannel and message.author.id in self.botSettings.drawAdminList:
+        member = message.author
+
+        if message.channel.id == self.botSettings.drawAdminChannel and member.id in self.botSettings.drawAdminList:
             if re.match("!testidiom", message.content):
                 item = self.GetRandomItem()
-                member = message.author
                 await self.ApplyIdiom(member, item, message, False)
 
-        # 932817644954980392 # 機器人1號
-        if re.match("!idiom", message.content):
-            item = self.GetRandomItem()
-            member = message.author
+        if message.channel.id != self.botSettings.idiomChannel:
+            return
 
-            # 測試處理
-            member = await self.botClient.GetGuild().fetch_member(932817644954980392)
+        if re.match("橙雨大師請賜福給我", message.content):
+            if member.id in self.allLogs and datetime.datetime.now() < self.allLogs[member.id].nextTime:
+                nextTime = self.allLogs[member.id].nextTime
+                stamp = int(nextTime.timestamp())
+                await message.reply(f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽", mention_author=False)
+                return
+
+            item = self.GetRandomItem()
             await self.ApplyIdiom(member, item, message)

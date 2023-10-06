@@ -85,3 +85,7 @@ class BotSettings:
         self.SetDict(trans_data,
                      "drawAdminChannel", "DRAW_ADMIN_CHANNEL_ID", 0)
         self.SetDict(trans_data, "drawAdminList", "DRAW_ADMIN_LIST")
+
+        self.SetDict(trans_data, "idiomChannel", "IDIOM_CHANNEL_ID", 0)
+        self.SetDict(trans_data, "idiomCooldownSecond", "IDIOM_COOLDOWN_SECOND", 0)
+
