@@ -1,7 +1,7 @@
 啟動工具
-D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test 1 ../Files/sql/draw.tsv
-D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test 2 ../../../Files/sql/idiom.tsv
-D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain 2 ../../../Files/sql/idiom.tsv
+D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test draw ../../../Files/sql/draw.tsv
+D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test idiom ../../../Files/sql/idiom.tsv
+D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain idiom ../../../Files/sql/idiom.tsv
 
 舊式啟動機員人
 PS D:\data\Git\RioTest\DiscordBot> python .\DiscordBotEnter.py nerolirain nerolirain

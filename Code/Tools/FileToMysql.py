@@ -8,21 +8,55 @@ import traceback
 from dotenv import load_dotenv
 from Utility.MysqlManager import MysqlManager
 
-DRAW_DATA = ["item_id", "weight", "name", "message",
-             "image", "festival", "festival_hint"]
-IDIOM_DATA = ["idiom", "comment"]
-DRAW_CHECK_LIST = [0, 2]
-IDIOM_CHECK_LIST = [0]
-DRAW_DB_PREFIX = "draw_item_"
-IDIOM_DB_PREFIX = "idiom_item_"
+
+class Setting:
+    keyList: list = []
+    checkIndex: list = []
+    dbPrefix: str = ""
+    uniqueKeysIndex: list = []
 
 
-class DataType:
-    DRAW = 1
+def GetMorningSetting() -> Setting:
+    result = Setting()
+    result.keyList = ["item_id", "weight", "name",
+                      "message", "image", "festival", "festival_hint"]
+    result.checkIndex = [0, 2]
+    result.dbPrefix = "draw_item_"
+    result.uniqueKeysIndex = [0]
+    return result
 
 
-def File2Mysql(filePath, tablePostfix, refData, checkList, dbPrefix):
+def GetIdiomSetting() -> Setting:
+    result = Setting()
+    result.keyList = ["idiom", "comment"]
+    result.checkIndex = [0]
+    result.dbPrefix = "idiom_item_"
+    result.uniqueKeysIndex = [0]
+    return result
+
+
+def File2Mysql(filePath, tablePostfix, setting: Setting):
     with open(filePath, "r", encoding="utf-8") as file:
+        keyList = setting.keyList
+        uniqueDatas = []
+        for index in setting.uniqueKeysIndex:
+            while len(uniqueDatas) <= index:
+                uniqueDatas.append({})
+        sql = MysqlManager(
+            host=os.getenv("MYSQL_HOST"),
+            port=int(os.getenv("MYSQL_PORT")),
+            user_name=os.getenv("MYSQL_USER"),
+            password=os.getenv("MYSQL_PASSWORD"),
+            schema_name=os.getenv("MYSQL_SCHEMA_NAME")
+        )
+        keyString = ",".join(keyList)
+        tableName = f"discord_bot.{setting.dbPrefix}{tablePostfix}"
+        selectCommand = f"SELECT {keyString} FROM {tableName}"
+        selectDatas = sql.SimpleSelect(selectCommand)
+        for rowData in selectDatas:
+            for index in setting.uniqueKeysIndex:
+                uniqueDatas[index][rowData[index]] = True
+
         sqlArr = []
         count = 0
         for line in file:
@@ -31,32 +65,32 @@ def File2Mysql(filePath, tablePostfix, refData, checkList, dbPrefix):
                 continue
             lineSplit = line.split("\t")
             needSkip = False
-            for index in checkList:
+            for index in setting.checkIndex:
                 if len(lineSplit[index]) == 0:
+                    needSkip = True
+                    break
+            for index in setting.uniqueKeysIndex:
+                if len(lineSplit[index]) == 0 or lineSplit[index] in uniqueDatas[index]:
                     needSkip = True
                     break
             if needSkip:
                 continue
+            for index in setting.uniqueKeysIndex:
+                if len(lineSplit[index]) != 0:
+                    uniqueDatas[index][lineSplit[index]] = True
+                    
             lineArr = []
-            for index in range(len(refData)):
+            for index in range(len(keyList)):
                 lineArr.append(lineSplit[index])
             sqlArr.append(lineArr)
 
-        keyString = ",".join(refData)
         valueString = "%s"
-        for index in range(len(refData)-1):
+        for index in range(len(keyList)-1):
             valueString += " ,%s"
-        command = (f"INSERT INTO discord_bot.{dbPrefix}{tablePostfix}"
-                   f"({keyString})"
-                   f"VALUES ({valueString})")
-        sql = MysqlManager(
-            host=os.getenv("MYSQL_HOST"),
-            port=int(os.getenv("MYSQL_PORT")),
-            user_name=os.getenv("MYSQL_USER"),
-            password=os.getenv("MYSQL_PASSWORD"),
-            schema_name=os.getenv("MYSQL_SCHEMA_NAME")
-        )
-        sql.SimpleCommandMany(command, sqlArr)
+        insertCommand = (f"INSERT INTO {tableName}"
+                         f"({keyString})"
+                         f"VALUES ({valueString})")
+        sql.SimpleCommandMany(insertCommand, sqlArr)
 
 
 # args = sys.argv[1:]
@@ -71,7 +105,7 @@ if __name__ == '__main__':
         ok = False
     else:
         tablePostfix = sys.argv[1]
-        dataType = int(sys.argv[2])
+        dataType = sys.argv[2]
         filePath = sys.argv[3]
 
         ok = True
@@ -84,24 +118,19 @@ if __name__ == '__main__':
                 print("資料庫後綴有誤")
                 ok = False
 
-        refData = None
-        checkList = None
+        data = None
         match dataType:
-            case 1:
-                refData = DRAW_DATA
-                checkList = DRAW_CHECK_LIST
-                dbPrefix = DRAW_DB_PREFIX
-            case 2:
-                refData = IDIOM_DATA
-                checkList = IDIOM_CHECK_LIST
-                dbPrefix = IDIOM_DB_PREFIX
+            case "draw":
+                data = GetMorningSetting()
+            case "idiom":
+                data = GetIdiomSetting()
             case _:
                 print("資料類別有誤")
                 ok = False
 
     if ok:
         try:
-            File2Mysql(filePath, tablePostfix, refData, checkList, dbPrefix)
+            File2Mysql(filePath, tablePostfix, data)
         except Exception:
             print(traceback.format_exc())
         print("檔案輸入資料庫完成")
