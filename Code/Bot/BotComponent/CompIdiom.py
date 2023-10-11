@@ -59,8 +59,10 @@ class CompIdiom(CompBotBase):
         self.LogI(f"成語總數:{len(allItems)}")
 
     def LoadLogs(self):
-        command = (f"SELECT user_id, old_nick, idiom, MAX(log_time) as logtime "
-                   f" FROM idiom_log_{self.botSettings.sqlPostfix} group by user_id")
+        tableName = f"idiom_log_{self.botSettings.sqlPostfix}"
+        command = (f"SELECT t.user_id, t.old_nick, t.idiom, t.log_time"
+                   f" FROM ( SELECT user_id, MAX(log_time) as max_time FROM {tableName} GROUP BY user_id ) as r"
+                   f" INNER JOIN {tableName} as t ON t.user_id = r.user_id AND t.log_time = r.max_time ;")
         selectData = self.sql.SimpleSelect(command)
         allLogs = {}
         for rowData in selectData:
@@ -94,6 +96,7 @@ class CompIdiom(CompBotBase):
                 if member.id == message.guild.owner.id:
                     self.LogI("擁有者不能改名")
                 else:
+                    self.LogI(f"暱稱更新'{member.display_name}' -> '{newNick}'")
                     self.UpdateNickLog(member, item)
                     await member.edit(nick=newNick)
             await message.reply(f'萊傑請示橙雨大師的結果為：{item.idiom}', mention_author=False)
