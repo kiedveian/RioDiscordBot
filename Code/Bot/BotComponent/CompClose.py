@@ -290,6 +290,8 @@ class CompClose(CompBotBase):
             return
         message = await self.botClient.FetchChannelMessage(payload.channel_id, payload.message_id)
         if message == None:
+            self.LogW(
+                f"empty message, id: {payload.message_id}({payload.channel_id})")
             return
         isReflection = self.CheckIsReflection(message.author)
         if not isReflection and closeType == CloseType.RIOT:
@@ -343,7 +345,6 @@ class CompClose(CompBotBase):
 
 
 # ------------------ 上面為各種事件，給 botClient 呼叫的 ------------------
-
 
     async def CloseByDraw(self, message: discord.Message):
         duration = datetime.timedelta(minutes=3)

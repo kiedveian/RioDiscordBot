@@ -1,5 +1,6 @@
 
 
+import traceback
 import discord
 
 from Bot.BotComponent.BotSettings import BotSettings
@@ -64,7 +65,12 @@ class BotClient(discord.Client):
         channel = self.get_channel(channelId)
         if channel == None:
             return None
-        return await channel.fetch_message(messageId)
+        try:
+            message = await channel.fetch_message(messageId)
+            return message
+        except Exception:
+            self.LogE(traceback.format_exc())
+        return None
 
     def _GetLogDepth(self, **kwargs):
         depth = BotClient.DEFAULT_LOG_DEPTH

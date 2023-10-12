@@ -212,7 +212,6 @@ class CompDraw(CompBotBase):
 
 # ------------------ 下面為管理員身份功能 ------------------
 
-
     async def _TryAdminCommand(self, message: discord.Message) -> bool:
         if message.channel.id != self.botSettings.drawAdminChannel:
             return False
@@ -288,6 +287,7 @@ class CompDraw(CompBotBase):
 
 # ------------------ 下面為各種事件，給 botClient 呼叫的 ------------------
 
+
     async def on_message(self, message: discord.Message) -> None:
         if await self._TryAdminCommand(message):
             return
@@ -318,6 +318,9 @@ class CompDraw(CompBotBase):
                     await message.reply("可以抽了")
                     self.sql.SimpleCommand(
                         self.updateAlarmMessage, (0, user_id))
+                else:
+                    self.LogW(
+                        f"empty message, id: {self.drawAlarmMessages[user_id]}")
 
         for user_id in alarmList:
             del self.drawAlarmMessages[user_id]
