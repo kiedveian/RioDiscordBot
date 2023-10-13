@@ -50,6 +50,7 @@ class CompDraw(CompBotBase):
     selectAlarmString: str = None
     updateAlarmMessage: str = None
     nextUpdateTime: datetime.datetime = None
+    displayDeltaTime: datetime.timedelta = None
 
     drawAlarmMessages = {}
     compUsers: CompUsers = None
@@ -69,6 +70,7 @@ class CompDraw(CompBotBase):
         self.selectItemString = f"SELECT item_id, name, weight, message, image, festival, festival_hint FROM draw_item_{self.botSettings.sqlPostfix} where weight != 0"
         self.selectAlarmString = f"SELECT user_id, draw_alarm_message FROM user_data_{self.botSettings.sqlPostfix} WHERE draw_alarm_message != 0"
         self.updateAlarmMessage = f"UPDATE user_data_{self.botSettings.sqlPostfix} SET draw_alarm_message = %s WHERE user_id = %s"
+        self.displayDeltaTime = datetime.timedelta(minutes=2)
 
         self.LoadItems()
         self.LoadAlarmMessages()
@@ -306,7 +308,13 @@ class CompDraw(CompBotBase):
             else:
                 drawTime = self.compUsers.GetDrawTime(message.author.id)
                 stamp = int(drawTime.timestamp())
-                await message.reply(f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽", mention_author=False)
+                diffTime = drawTime - datetime.datetime.now()
+                if diffTime < self.displayDeltaTime:
+                    diffStr = f"{diffTime.seconds}秒"
+                    replyMsg = f"等到 <t:{stamp}:T>({diffStr}後) 才可以抽"
+                else:
+                    replyMsg = f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽"
+                await message.reply(replyMsg, mention_author=False)
 
     async def PreSecondEvent(self):
         alarmList = []

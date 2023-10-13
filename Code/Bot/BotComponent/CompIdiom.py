@@ -29,6 +29,7 @@ class CompIdiom(CompBotBase):
     allItems = []
     allLogs = {}
     cooldownDelta: datetime.timedelta = None
+    displayDeltaTime: datetime.timedelta = None
 
     def Initial(self) -> bool:
         if not super().Initial():
@@ -37,6 +38,7 @@ class CompIdiom(CompBotBase):
         self.allEvent["on_message"] = True
         self.cooldownDelta = datetime.timedelta(
             seconds=self.botSettings.idiomCooldownSecond)
+        self.displayDeltaTime = datetime.timedelta(minutes=2)
         self.LoadItems()
         self.LoadLogs()
         return True
@@ -139,7 +141,13 @@ class CompIdiom(CompBotBase):
             if member.id in self.allLogs and datetime.datetime.now() < self.allLogs[member.id].nextTime:
                 nextTime = self.allLogs[member.id].nextTime
                 stamp = int(nextTime.timestamp())
-                await message.reply(f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽", mention_author=False)
+                diffTime = nextTime - datetime.datetime.now()
+                if diffTime < self.displayDeltaTime:
+                    diffStr = f"{diffTime.seconds}秒"
+                    replyMsg = f"等到 <t:{stamp}:T>({diffStr}後) 才可以抽"
+                else:
+                    replyMsg = f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽"
+                await message.reply(replyMsg, mention_author=False)
                 return
 
             item = self.GetRandomItem()
