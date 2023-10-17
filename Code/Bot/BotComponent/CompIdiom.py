@@ -141,12 +141,7 @@ class CompIdiom(CompBotBase):
             if member.id in self.allLogs and datetime.datetime.now() < self.allLogs[member.id].nextTime:
                 nextTime = self.allLogs[member.id].nextTime
                 stamp = int(nextTime.timestamp())
-                diffTime = nextTime - datetime.datetime.now()
-                if diffTime < self.displayDeltaTime:
-                    diffStr = f"{diffTime.seconds}秒"
-                    replyMsg = f"等到 <t:{stamp}:T>({diffStr}後) 才可以抽"
-                else:
-                    replyMsg = f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽"
+                replyMsg = f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽"
                 await message.reply(replyMsg, mention_author=False)
                 return
 
