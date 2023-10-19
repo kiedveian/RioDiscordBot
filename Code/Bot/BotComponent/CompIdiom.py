@@ -126,6 +126,16 @@ class CompIdiom(CompBotBase):
                 removeIdiom = member.display_name[len(preFix):]
         return item.idiom + NICK_SIGN + removeIdiom
 
+    def GetUserAllIdiom(self, userId: int):
+        command = (f"SELECT idiom FROM idiom_log_{self.botSettings.sqlPostfix}"
+                   f" WHERE user_id = {userId}")
+
+        selectData = self.sql.SimpleSelect(command)
+        result = []
+        for rowData in selectData:
+            result.append(rowData[0])
+        return result
+
     async def on_message(self, message: discord.Message) -> None:
         member = message.author
 
@@ -147,3 +157,10 @@ class CompIdiom(CompBotBase):
 
             item = self.GetRandomItem()
             await self.ApplyIdiom(member, item, message)
+
+        if re.match("!賜福歷史", message.content):
+            datas = self.GetUserAllIdiom(message.author.id)
+            if len(datas) == 0:
+                await message.reply("沒有賜福記錄", mention_author=False)
+            else:
+                await message.reply(">".join(datas), mention_author=False)
