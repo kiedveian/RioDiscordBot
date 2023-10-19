@@ -3,6 +3,7 @@
 import re
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Utility.EmbedTool import GetPreviewUrl
 
 
 class CompSnipe(CompBotBase):
@@ -25,33 +26,20 @@ class CompSnipe(CompBotBase):
         if removePayload.cached_message == None:
             await message.reply(content="找不到刪除的訊息", mention_author=False)
         removeMsg = removePayload.cached_message
-        embeds = []
         title = f"{removeMsg.author.display_name}({removeMsg.author.name})"
         firstEmbed = discord.Embed(title=title, color=0x3498db)
         firstEmbed.add_field(name="刪除的訊息", value=removeMsg.content)
-        embeds.append(firstEmbed)
-        emptyImage = True
-        allUrls = []
-        for attach in removeMsg.attachments:
-            allUrls.append(attach.url)
         stickers = []
-        guildStickers = await self.botClient.GetGuild().fetch_stickers()
-        strickerIds = [sticker.id for sticker in guildStickers]
-        for getSticker in removeMsg.stickers:
-            if getSticker.id in strickerIds:
-                stickers.append(getSticker)
-            else:
-                allUrls.append(getSticker.url)
-        for url in allUrls:
-            if emptyImage:
-                embeds[0].set_image(url=url)
-                emptyImage = False
-            else:
-                addEmbed = discord.Embed()
-                addEmbed.set_image(url=url)
-                addEmbed.add_field(name="刪除的訊息", value=removeMsg.content)
-                embeds.append(addEmbed)
-        await message.reply(embeds=embeds, mention_author=False, stickers=stickers)
+        # guildStickers = await self.botClient.GetGuild().fetch_stickers()
+        # strickerIds = [sticker.id for sticker in guildStickers]
+        # for getSticker in removeMsg.stickers:
+        #     if getSticker.id in strickerIds:
+        #         stickers.append(getSticker)
+        if len(stickers) == 0:
+            imgUrl = GetPreviewUrl(removeMsg)
+            if imgUrl != None:
+                firstEmbed.set_image(url=imgUrl)
+        await message.reply(embed=firstEmbed, mention_author=False, stickers=stickers)
 
     async def ReplyEditMessage(self, message: discord.Message):
         # TODO lock
