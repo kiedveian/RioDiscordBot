@@ -65,13 +65,13 @@ class CompSnipe(CompBotBase):
             self.editMessages[payload.channel_id] = payload
 
     async def on_message(self, message: discord.Message) -> None:
-        if re.match("!snipe", message.content):
+        if re.match("![Ss][Nn][Ii][Pp][Ee]", message.content):
             if message.channel.id in self.removeMessages:
                 await self.ReplyRemoveMessage(message=message)
             else:
                 await message.reply(content="找不到刪除的訊息", mention_author=False)
 
-        if re.match("!esnipe", message.content):
+        if re.match("![Ee][Ss][Nn][Ii][Pp][De]", message.content):
             if message.channel.id in self.editMessages:
                 await self.ReplyEditMessage(message=message)
             else:
