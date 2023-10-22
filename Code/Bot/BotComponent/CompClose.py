@@ -294,7 +294,7 @@ class CompClose(CompBotBase):
                 f"empty message, id: {payload.message_id}({payload.channel_id})")
             return
         isReflection = self.CheckIsReflection(message.author)
-        if not isReflection and closeType == CloseType.RIOT:
+        if closeType == CloseType.RIOT:
             if not await self.CheckRiotSuccessful(payload, message):
                 return
 
