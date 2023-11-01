@@ -35,6 +35,8 @@ def GetPreviewUrl(message: discord.Message):
         if attachement.url != None:
             return attachement.url
 
+    Log.I(message.channel.name)
+    Log.I(message.content)
     Log.W(message.embeds)
     Log.W(message.attachments)
     Log.W(message.stickers)

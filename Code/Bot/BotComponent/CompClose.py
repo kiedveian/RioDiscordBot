@@ -46,7 +46,7 @@ class CloseData:
 
 class CompClose(CompBotBase):
     cacheReleaseTime = {}
-    closeTimeLock: threading.Lock = None
+    processCount: int = 0
 
     updateCloseTimeString = ""
     compUsers: CompUsers = None
@@ -64,7 +64,7 @@ class CompClose(CompBotBase):
         self.allEvent["on_raw_reaction_add"] = True
         self.allEvent["PreSecondEvent"] = True
 
-        self.closeTimeLock = threading.Lock()
+        self.processCount = 0
 
         self.updateCloseTimeString = (f"CALL update_close_time_{self.botSettings.sqlPostfix} "
                                       " (%s, %s, %s, %s, %s, %s, %s)")
@@ -237,7 +237,7 @@ class CompClose(CompBotBase):
         nowTime = datetime.datetime.now()
         roleIds = [member.id for member in closeRole.members]
         sqlUpdateValues = []
-        self.closeTimeLock.acquire()  # 上鎖
+        self.processCount += 1
         isReflectionInt = 0
         if closeData.isReflection:
             isReflectionInt = 1
@@ -257,7 +257,7 @@ class CompClose(CompBotBase):
             totalSeconds = int(deltaTime.total_seconds())
             sqlUpdateValues.append(
                 [member.id, nowTime, endTime, member.display_name, closeData.closeType, totalSeconds, isReflectionInt])
-        self.closeTimeLock.release()  # 解鎖
+        self.processCount += -1
         self.sql.SimpleCommandMany(self.updateCloseTimeString, sqlUpdateValues)
 
         replyList = self.GetSendStringList(closeData)
@@ -275,14 +275,10 @@ class CompClose(CompBotBase):
 # ------------------ 下面為各種事件，給 botClient 呼叫的 ------------------
 
     async def PreSecondEvent(self):
-        if self.closeTimeLock.locked():
-            self.LogI("close time locked")
+        if self.processCount > 0:
+            self.LogI(f"processCount: {self.processCount}")
             return
-        self.closeTimeLock.acquire()  # 上鎖
-        # if self.needUpdateReleaseTime:
-        #     await self.UpdateReleaseTime()
         await self.CheckRelease()
-        self.closeTimeLock.release()  # 解鎖
 
     async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent):
         closeType = self.GetCloseTypeByReatcion(payload)
