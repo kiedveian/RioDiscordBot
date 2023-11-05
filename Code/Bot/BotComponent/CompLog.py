@@ -12,6 +12,7 @@ class CompLog(CompBotBase):
     allSticker: set
     insertMessageCommand: str = ""
     insertReactionCommand: str = ""
+    insertDmCommand: str = ""
 
     def Initial(self) -> bool:
         if not super().Initial():
@@ -36,8 +37,19 @@ class CompLog(CompBotBase):
         self.insertReactionCommand = (f"INSERT INTO reaction_log_{self.botSettings.sqlPostfix}"
                                       "(message_id, user_id, channel_id)"
                                       "VALUES (%s, %s, %s) ")
+        self.insertDmCommand = (f"INSERT INTO dm_log_{self.botSettings.sqlPostfix}"
+                                "(message_id, content, channel_id, member_id, member_nick, create_time)"
+                                "VALUES (%s, %s, %s, %s, %s, %s) ")
 
     async def LogMessage(self, message: discord.Message):
+        if type(message.channel) is discord.DMChannel:
+            # 私訊
+            if message.author.bot:
+                return
+            self.sql.SimpleCommand(self.insertDmCommand, (message.id, message.content, message.channel.id,
+                                                          message.author.id, message.author.display_name, message.created_at))
+            return
+
         if len(message.stickers) > 1:
             self.LogW(f"sticker more than one: {len(message.stickers)}")
         stickerId = 0
