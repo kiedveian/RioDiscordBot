@@ -10,6 +10,7 @@ from Bot.BotComponent.CompSnipe import CompSnipe
 from Bot.BotComponent.CompSystem import CompSystem
 from Bot.BotComponent.CompUpdateDatabase import CompUpdateDatabase
 from Bot.BotComponent.CompUsers import CompUsers
+from Bot.BotComponent.CompCommands import CompCommands
 
 
 class BotNerolirain(BotBase):
@@ -26,3 +27,4 @@ class BotNerolirain(BotBase):
         self.AddComponent("compSystem", CompSystem())
         self.AddComponent("compIdiom", CompIdiom())
         self.AddComponent("compRandom", CompRandom())
+        self.AddComponent("compCommands", CompCommands())
