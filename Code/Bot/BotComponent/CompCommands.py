@@ -16,13 +16,11 @@ class CompCommands(CompBotBase):
         if not super().Initial():
             return False
 
-        # self.commandColseAll = f"SELECT * FROM discord_bot.view_totoal_close_time_{self.botSettings.sqlPostfix};"
-        self.commandColseAll = f"SELECT * FROM discord_bot.view_totoal_close_time_nerolirain;"
+        self.commandColseAll = f"SELECT * FROM discord_bot.view_totoal_close_time_{self.botSettings.sqlPostfix};"
         self.commandColseTime = (f" SELECT `log`.`user_id` AS `user_id`, `all_user`.`nick` AS `nick`"
                                  f" ,ROUND((SUM(`log`.`delta_time`) / 60.0), 1) AS `total_time(min)`"
                                  f" ,COUNT(*) AS `cnt`"
-                                 #  f"  FROM (`close_log_{self.botSettings.sqlPostfix}` `log`"
-                                 f"  FROM (`close_log_nerolirain` `log`"
+                                  f"  FROM (`close_log_{self.botSettings.sqlPostfix}` `log`"
                                  f"   LEFT JOIN `all_user` ON((`log`.`user_id`= `all_user`.`user_id`)))"
                                  f" WHERE `log`.`event_time` > '%s' AND `log`.`event_time` < '%s'"
                                  f" GROUP BY `log`.`user_id`"

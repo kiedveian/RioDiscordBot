@@ -12,11 +12,17 @@ class CompSystem(CompBotBase):
             return False
 
         self.allEvent["PreSecondEvent"] = True
-
+        self.allEvent["on_ready"] = True
+        
         self.updateSecond = 10
 
         self.CheckKey()
         return True
+
+    async def on_ready(self) -> None:
+        kiedveian = await self.botClient.fetch_user(160763041447804938)
+        if kiedveian != None:
+            await kiedveian.send(f"機器人登入了：{self.botClient.GetGuild()}" )
 
     def CheckKey(self):
         pass
