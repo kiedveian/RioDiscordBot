@@ -1,14 +1,14 @@
 
 
 from Bot.BotComponent.Base.CompBase import CompBase
-from Bot.BotComponent.BotClient import BotClient
 from Bot.BotComponent.BotSettings import BotSettings
+from Bot.SlashCommand.CommandsBot import CommandsBot
 from Utility.MysqlManager import MysqlManager
 
 
 class CompBotBase(CompBase):
     sql: MysqlManager
-    botClient: BotClient
+    botClient: CommandsBot
     botSettings: BotSettings
 
     def CanInitial(self) -> bool:

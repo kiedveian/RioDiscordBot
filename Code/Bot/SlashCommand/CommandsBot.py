@@ -1,14 +1,14 @@
 
-
 import traceback
 import discord
+from discord.ext import commands, tasks
 
 from Bot.BotComponent.BotSettings import BotSettings
-from Utility.DebugTool import LogToolGeneral
-from Utility.DebugTool import Log
+from Utility.DebugTool import Log, LogToolGeneral
 
+# SlashCommandGroup
 
-class BotClient(discord.Client):
+class CommandsBot(commands.Bot):
     DEFAULT_LOG_DEPTH = LogToolGeneral.DEFAULT_LOG_DEPTH + 1
     botSettings: BotSettings
 
@@ -16,6 +16,8 @@ class BotClient(discord.Client):
     cacheCloseChannel: discord.TextChannel
     # cacheDrawgChannel: discord.TextChannel
     cacheCloseRole: discord.Role
+
+    bot = None
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -29,6 +31,8 @@ class BotClient(discord.Client):
     def SetComponents(self, bot):
         self.botSettings = bot.GetComponent("botSettings")
         self.botEvent = bot.GetComponent("botEvent")
+
+        self.bot = bot
 
     def GetGuild(self) -> discord.Guild:
         if self.cacheGuild == None:
@@ -73,7 +77,7 @@ class BotClient(discord.Client):
         return None
 
     def _GetLogDepth(self, **kwargs):
-        depth = BotClient.DEFAULT_LOG_DEPTH
+        depth = CommandsBot.DEFAULT_LOG_DEPTH
         if "depth" in kwargs:
             depth = kwargs["depth"]
             del kwargs["depth"]
@@ -104,3 +108,21 @@ class BotClient(discord.Client):
 
     async def on_raw_message_edit(self, *args, **kwargs):
         await self.botEvent.on_raw_message_edit(*args, **kwargs)
+
+# 以下為task用
+
+    async def setup_hook(self) -> None:
+        self.my_background_task.start()
+
+    @tasks.loop(seconds=1)  # task runs every 60 seconds
+    async def my_background_task(self):
+        try:
+            # TODO 可能要改別的寫法，不該直接用bot
+            await self.bot.PreSecondEvent()
+        except Exception:
+            Log.E(traceback.format_exc())
+
+    @my_background_task.before_loop
+    async def before_my_task(self):
+        await self.wait_until_ready()  # wait until the bot logs in
+        Log.I("初始完畢")

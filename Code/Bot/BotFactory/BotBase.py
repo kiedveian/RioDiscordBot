@@ -5,8 +5,8 @@ import traceback
 import discord
 from dotenv import load_dotenv
 from Bot.BotComponent.BotSettings import BotSettings
-from Bot.BotComponent.BotClient import BotClient
 from Bot.BotComponent.Base.CompBase import CompBase
+from Bot.SlashCommand.CommandsBot import CommandsBot
 from Utility.DebugTool import Log, LogToolGeneral
 from Utility.MysqlManager import MysqlManager
 
@@ -25,7 +25,7 @@ class BotBase:
 
     # 通用功能
     sql: MysqlManager
-    botClient: BotClient
+    botClient: CommandsBot
     botSettings: BotSettings
 
     def __init__(self) -> None:
@@ -39,6 +39,7 @@ class BotBase:
         self._SetBaseUtility(sqlPostfix)
         self._SetAllBaseData()
         self._SetAllComponents()
+        self._AddSlashCommands()
 
     def _SetBaseUtility(self, sqlPostfix):
         self.allComp["botEvent"] = self
@@ -65,7 +66,7 @@ class BotBase:
         intents.message_content = True
         intents.members = True
         intents.reactions = True
-        self.botClient = BotClient(intents=intents)
+        self.botClient = CommandsBot(command_prefix='!', intents=intents)
         self.botClient.SetComponents(self)
         self.allComp["botClient"] = self.botClient
 
@@ -73,6 +74,9 @@ class BotBase:
         self._AddAllComponents()
         self._SetAllComponentInitial()
         self._SetAllComponentEvnets()
+
+    def _AddSlashCommands(self):
+        pass
 
     def _AddAllComponents(self):
         # 加入需要的組件
@@ -178,6 +182,7 @@ class BotBase:
                 await obj.on_ready()
             except Exception:
                 self.LogException(traceback.format_exc())
+        await self.botClient.setup_hook()
         self.isReady = True
 
     async def on_message(self, message: discord.Message) -> None:

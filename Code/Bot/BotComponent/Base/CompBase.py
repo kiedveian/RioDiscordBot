@@ -1,6 +1,5 @@
 
 
-from Bot.BotComponent.BotClient import BotClient
 from Bot.BotComponent.BotSettings import BotSettings
 from Utility.DebugTool import Log, LogToolGeneral
 from Utility.MysqlManager import MysqlManager

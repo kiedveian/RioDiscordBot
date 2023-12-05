@@ -42,14 +42,17 @@ def MyMain(argv):
     AddLogToFile(f"../Files/logs/{botName}-{postfix}_{timeString}.log")
 
     Log.I(f"sql postfix: {postfix}")
+    Log.I("程式執行時間 %s" % (datetime.datetime.today()))
 
     g_bot = CreateBot(botName)
     if g_bot == None:
         Log.E(f"bot name error {botName}")
     else:
         g_bot.SetData(postfix)
-        asyncio.run(RunTask())
+        # asyncio.run(RunTask())
+        g_bot.botClient.run(g_bot.botSettings.botToken)
 
 
 if __name__ == '__main__':
-    asyncio.run(MyMain(sys.argv))
+    # asyncio.run(MyMain(sys.argv))
+    MyMain(sys.argv)
