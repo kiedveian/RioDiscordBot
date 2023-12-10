@@ -6,8 +6,6 @@ from discord.ext import commands, tasks
 from Bot.BotComponent.BotSettings import BotSettings
 from Utility.DebugTool import Log, LogToolGeneral
 
-# SlashCommandGroup
-
 class CommandsBot(commands.Bot):
     DEFAULT_LOG_DEPTH = LogToolGeneral.DEFAULT_LOG_DEPTH + 1
     botSettings: BotSettings

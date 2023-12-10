@@ -28,3 +28,9 @@ class BotNerolirain(BotBase):
         self.AddComponent("compIdiom", CompIdiom())
         self.AddComponent("compRandom", CompRandom())
         self.AddComponent("compCommands", CompCommands())
+
+    def _AddSlashCommands(self):
+        super()._AddSlashCommands()
+
+        self.botClient.load_extension(f"Bot.Cogs.AgeImageCog")
+        self.botClient.reload_extension(f"Bot.Cogs.AgeImageCog")
