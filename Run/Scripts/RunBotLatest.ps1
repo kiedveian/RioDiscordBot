@@ -65,7 +65,9 @@ Push-Location "$PSScriptRoot\..\Lastest\$branch"
 
 
 try {
-    python .\BotMain.py $branch $sql
+    py -3 .\BotMain.py $branch $sql
+} Catch {
+    Write-Host "執行失敗"
 }
 finally {
     Pop-Location

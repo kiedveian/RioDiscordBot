@@ -28,9 +28,9 @@ async def BackgroundTask():
     Log.I(f"背景程式結束 錯誤數量:{errorCount}")
 
 
-async def RunTask():
-    asyncio.create_task(BackgroundTask())
-    await g_bot.Start()
+# async def RunTask():
+#     asyncio.create_task(BackgroundTask())
+#     await g_bot.Start()
 
 
 def MyMain(argv):

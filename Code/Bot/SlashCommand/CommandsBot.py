@@ -80,6 +80,9 @@ class CommandsBot(commands.Bot):
             depth = kwargs["depth"]
             del kwargs["depth"]
         return depth
+    
+    def AddCog(self, cog):
+        self.bot.AddCog(cog)
 
     def LogI(self, *args,  **kwargs):
         Log.I(depth=self._GetLogDepth(**kwargs), *args, **kwargs)

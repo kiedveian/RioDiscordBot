@@ -23,6 +23,8 @@ class BotBase:
     allOnRawMessageDeleteObj = []
     allOnRawMessageEditObj = []
 
+    allCog = []
+
     # 通用功能
     sql: MysqlManager
     botClient: CommandsBot
@@ -135,6 +137,13 @@ class BotBase:
             if comp.HasEvent("on_raw_message_edit"):
                 self.allOnRawMessageEditObj.append(comp)
 
+    def _SetAllCogInitial(self):
+        for cog in self.allCog:
+            cog.Initial()
+
+    def AddCog(self, cog):
+        self.allCog.append(cog)
+
     def _GetLogDepth(self, **kwargs):
         depth = BotBase.DEFAULT_LOG_DEPTH
         if "depth" in kwargs:
@@ -182,6 +191,8 @@ class BotBase:
                 await obj.on_ready()
             except Exception:
                 self.LogException(traceback.format_exc())
+        # TODO
+        self._SetAllCogInitial()
         await self.botClient.setup_hook()
         self.isReady = True
 

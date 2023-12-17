@@ -1,5 +1,5 @@
 啟動工具
-D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test draw ../../../Files/sql/draw.tsv
+D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test draw ../../../Files/sql/morning.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test idiom ../../../Files/sql/idiom.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain idiom ../../../Files/sql/idiom.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain draw ../../../Files/sql/morning.tsv
@@ -18,4 +18,8 @@ PS D:\data\Git\Discord\Bot\Run\Backup\test\2023-0924_163604> python BotMain.py t
 啟動Wbe後台
 PS D:\data\Git\Discord\Bot\Web\Django\nerolirain> python manage.py runserver
 PS D:\data\Git\Discord\Bot\Web\Django\nerolirain> python manage.py runserver 0.0.0.0:2337
+
+需啟動程式
+1. web後台
+2. 新式機器人
 
