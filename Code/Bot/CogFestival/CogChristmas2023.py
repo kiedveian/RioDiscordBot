@@ -21,55 +21,80 @@ TEST_USER_LIST = [
 
 class ChristmasItem:
     id: int
-    member:discord.Member
-    message: str
+    member: discord.Member
+    story: str
     bless: str
+
+
+class DrawLog:
+    item: ChristmasItem
+    drawMember: discord.Member
+    guessMember: discord.Member
 
 
 class CogChristmas2023(CogBase):
     allItems = []
-    allLogsById = {}
     itemState = {}
 
     # 輔助搜尋
-    mapNameToMember = {}
-    allLogsByDrawId = {}
+    logMapByDrawId = {}
+    itemMapByMemberId = {}
 
     def __init__(self, bot: CommandsBot):
         super().__init__(bot)
 
-    def Initial(self) -> bool:
+    async def Initial(self) -> bool:
         if not super().Initial():
             return False
-        self.LoadItems()
-        self.LoadLogs()
+        await self.LoadItems()
+        await self.LoadLogs()
         self.LoadSearchDatas()
 
-    def SetItem(self, item: ChristmasItem, rowData):
+    async def SetItem(self, item: ChristmasItem, rowData):
         account = rowData[1]
-        member = self.GetMemberByAccount(account)
+        member = await self.GetMemberByAccount(account)
         if member == None:
             self.LogE(f"找不到成員：{account}")
             return
         item.id = int(rowData[0])
         item.member = member
         item.bless = rowData[2]
-        item.message = rowData[3]
+        item.story = rowData[3]
 
-    def LoadItems(self):
-        pass
-        command = f"SELECT id, user, bless, message FROM festival_2023_christmas_item_{self.bot.bot.botSettings.sqlPostfix}"
+    async def LoadItems(self):
+        command = f"SELECT id, user, bless, story FROM festival_2023_christmas_item_{self.bot.bot.botSettings.sqlPostfix}"
         selectData = self.bot.bot.sql.SimpleSelect(command)
         allItems = []
+        itemMapByMemberId = {}
         for rowData in selectData:
             item = ChristmasItem()
-            self.SetItem(item, rowData)
+            await self.SetItem(item, rowData)
             allItems.append(item)
-        self.allItems = allItems
-        self.LogI(f"聖誕節故事總數:{len(allItems)}")
+            itemMapByMemberId[item.member.id] = item
 
-    def LoadLogs(self):
-        pass
+        self.allItems = allItems
+        self.itemMapByMemberId = itemMapByMemberId
+        self.LogI(f"聖誕節 全部的故事總數:{len(allItems)}")
+
+    async def LoadLogs(self):
+        command = f"SELECT user_id, user_name, draw_user_id, draw_user_name, guess_user_id, guess_user_name FROM festival_2023_christmas_log_{self.bot.bot.botSettings.sqlPostfix}"
+        selectData = self.bot.bot.sql.SimpleSelect(command)
+        logMapByDrawId = {}
+        for rowData in selectData:
+            # 932817644954980392
+            if int(rowData[0]) not in self.itemMapByMemberId:
+                self.LogE(f"找不到對應成員id:{rowData[0]}")
+                continue
+            log = DrawLog()
+            log.item = self.itemMapByMemberId[int(rowData[0])]
+            log.drawMember = await self.GetMebmerById(int(rowData[2]))
+            if rowData[4] == None:
+                log.guessMember = None
+            else:
+                log.guessMember = await self.GetMebmerById(int(rowData[4]))
+            logMapByDrawId[log.drawMember.id] = log
+        self.logMapByDrawId = logMapByDrawId
+        self.LogI(f"聖誕節 已抽過的故事總數:{len(logMapByDrawId)}")
 
     def LoadSearchDatas(self):
         # guild: discord.Guild = self.bot.bot.GetGuild()
@@ -77,8 +102,16 @@ class CogChristmas2023(CogBase):
 
         pass
 
-    def GetMemberByAccount(self, account: str) -> discord.Member:
+    async def GetMemberByAccount(self, account: str) -> discord.Member:
         member = self.bot.GetGuild().get_member_named(account)
+        if member == None:
+            member = await self.bot.GetGuild().get_member_named(id)
+        return member
+
+    async def GetMebmerById(self, id: int) -> discord.Member:
+        member = self.bot.GetGuild().get_member(id)
+        if member == None:
+            member = await self.bot.GetGuild().fetch_member(id)
         return member
 
     def GetRandomItem(self, onlyNever=True, skipUser=None) -> ChristmasItem:
@@ -103,7 +136,7 @@ class CogChristmas2023(CogBase):
         self.itemState[self.allItems[chooseIndex].member] = True
         return self.allItems[chooseIndex]
 
-    def InsertDrawLog(self, item: ChristmasItem, drawUser: discord.Member):
+    def InsertDrawLog(self, item: ChristmasItem, drawMember: discord.Member):
         member = item.member
         command = (f"INSERT INTO festival_2023_christmas_log_{self.bot.bot.botSettings.sqlPostfix}"
                    "(user_id, user_name, draw_user_id, draw_user_name)"
@@ -113,10 +146,13 @@ class CogChristmas2023(CogBase):
         #            "VALUES (%s, %s, %s, %s, %s, %s);")
 
         self.bot.bot.sql.SimpleCommand(
-            command, (member.id, member.name, drawUser.id, drawUser.name))
+            command, (member.id, member.name, drawMember.id, drawMember.name))
 
-    def UpdateGuessLog(self, drawUser: discord.Member):
+    def UpdateGuessLog(self, drawMember: discord.Member):
         pass
+
+    def GetNewNick(self, member: discord.Member, item: ChristmasItem) -> str:
+        return item.bless + member.display_name
 
     christmasGroup = SlashCommandGroup("聖誕節2023", "聖誕節的祝福指令")
     # christmasGroup = SlashCommandGroup("測試群組1212", "測試用的群組說明文字")
@@ -124,32 +160,67 @@ class CogChristmas2023(CogBase):
     @christmasGroup.command(name="抽取故事", description="抽出故事")
     # @christmasGroup.command(name="測試指令01", description="測試指令1的說明")
     async def draw(self, ctx: discord.ApplicationContext):
-        pass
-        if ctx.user.id not in TEST_USER_LIST:
-            self.LogI(f"{ctx.user.display_name}({ctx.user.name}) 使用指令 draw")
-            ctx.respond("非測試人員請勿使用", ephemeral=True)
-            pass
-        if ctx.user.id in self.allLogsByDrawId:
+        commandMember = await self.GetMebmerById(ctx.user.id)
+        if commandMember.id not in TEST_USER_LIST:
+            self.LogI(
+                f"{commandMember.display_name}({commandMember.name}) 使用指令 draw")
+            await ctx.respond("非測試人員請勿使用", ephemeral=True)
+            return
+        if commandMember.id in self.logMapByDrawId:
             msg = "你已經抽過了故事，抽到的故事："
-            item = self.allLogsByDrawId[ctx.user.id]
+            item = self.logMapByDrawId[commandMember.id]
         else:
             msg = "抽到的故事："
             item = self.GetRandomItem(onlyNever=False)
-            self.InsertDrawLog(item=item, drawUser=ctx.user)
+            self.InsertDrawLog(item=item, drawMember=commandMember)
 
         await ctx.respond(msg)
-        await ctx.respond(f"{item.message}")
+        await ctx.respond(f"{item.story}")
         await ctx.respond(f"接下來請使用指令猜測故事的主人")
 
     @christmasGroup.command(name="猜測", description="故事的主人")
     # @christmasGroup.command(name="測試指令02",description="測試指令2的說明")
-    async def guess(self, ctx: discord.ApplicationContext, member: discord.Member):
-        if ctx.user.id not in TEST_USER_LIST:
-            self.LogI(f"{ctx.user.display_name}({ctx.user.name}) 使用指令 guess")
-            ctx.respond("非測試人員請勿使用", ephemeral=True)
+    async def guess(self, ctx: discord.ApplicationContext, guess: discord.Member):
+        guessMember = guess
+        commandMember = await self.GetMebmerById(ctx.user.id)
+        if commandMember.id not in TEST_USER_LIST:
+            self.LogI(
+                f"{commandMember.display_name}({commandMember.name}) 使用指令 guess")
+            await ctx.respond("非測試人員請勿使用", ephemeral=True)
+            return
 
-        await ctx.respond("測試指令02")
-        pass
+        if commandMember.id not in self.logMapByDrawId:
+            await ctx.respond("請先抽過故事再猜")
+            return
+
+        drawLog: DrawLog = self.logMapByDrawId[commandMember.id]
+        item = drawLog.item
+        successful = True
+        if drawLog.guessMember != None:
+            await ctx.respond("已經猜過了喔")
+        else:
+            self.UpdateGuessLog(guessMember)
+            await ctx.respond(f"猜測的人是{guessMember.display_name}({guessMember.name})")
+            if item.member != guessMember:
+                successful = False
+        blessMember = None
+        if successful:
+            await ctx.respond(f"答對了，獲得祝福")
+            blessMember = commandMember
+        else:
+            await ctx.respond(f"猜錯了，故事的主人是{item.member.display_name}({item.member.name})")
+            blessMember = self.allItems[random.randrange(
+                len(self.allItems))].member
+            await ctx.respond(f"祝福飛往了{blessMember.display_name}({blessMember.name})")
+
+        newNick = self.GetNewNick(blessMember, item)
+        if len(newNick) > 32:
+            await ctx.respond(f'暱稱太長了！祝福「{item.bless}」飛走了')
+        elif blessMember == self.bot.GetGuild().owner:
+            await ctx.respond(f'伺服器擁有者不能改名！！！')
+        else:
+            self.LogI(f"暱稱更新'{blessMember.display_name}' -> '{newNick}'")
+            await blessMember.edit(nick=newNick)
 
 
 def setup(bot):

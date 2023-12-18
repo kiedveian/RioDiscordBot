@@ -137,9 +137,9 @@ class BotBase:
             if comp.HasEvent("on_raw_message_edit"):
                 self.allOnRawMessageEditObj.append(comp)
 
-    def _SetAllCogInitial(self):
+    async def _SetAllCogInitial(self):
         for cog in self.allCog:
-            cog.Initial()
+            await cog.Initial()
 
     def AddCog(self, cog):
         self.allCog.append(cog)
@@ -192,7 +192,7 @@ class BotBase:
             except Exception:
                 self.LogException(traceback.format_exc())
         # TODO
-        self._SetAllCogInitial()
+        await self._SetAllCogInitial()
         await self.botClient.setup_hook()
         self.isReady = True
 

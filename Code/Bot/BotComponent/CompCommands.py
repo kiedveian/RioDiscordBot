@@ -57,8 +57,8 @@ class CompCommands(CompBotBase):
         for index in range(count):
             # user_id, nick total_time(min)
             rowData = datas[index]
-            user = await self.botClient.fetch_user(rowData[0])
-            resultString += f"\n第{index+1}名 {rowData[2]}分({rowData[3]}次) {user.display_name}({user.name})"
+            member = await self.botClient.GetGuild().fetch_member(rowData[0])
+            resultString += f"\n第{index+1}名 {rowData[2]}分({rowData[3]}次) {member.display_name}({member.name})"
 
         if noEnough:
             resultString += f"\n第{count+1}名 從缺"
