@@ -30,15 +30,16 @@ class DrawLog:
     item: ChristmasItem
     drawMember: discord.Member
     guessMember: discord.Member
+    blessMember: discord.Member
 
 
 class CogChristmas2023(CogBase):
     allItems = []
-    itemState = {}
 
     # 輔助搜尋
+    itemMapByItemId = {}
     logMapByDrawId = {}
-    itemMapByMemberId = {}
+    logMapByItemId = {}
 
     def __init__(self, bot: CommandsBot):
         super().__init__(bot)
@@ -65,34 +66,40 @@ class CogChristmas2023(CogBase):
         command = f"SELECT id, user, bless, story FROM festival_2023_christmas_item_{self.bot.bot.botSettings.sqlPostfix}"
         selectData = self.bot.bot.sql.SimpleSelect(command)
         allItems = []
-        itemMapByMemberId = {}
+        itemMapByItemId = {}
         for rowData in selectData:
             item = ChristmasItem()
             await self.SetItem(item, rowData)
             allItems.append(item)
-            itemMapByMemberId[item.member.id] = item
+            # itemMapByMemberId[item.member.id] = item
+            itemMapByItemId[item.id] = item
 
         self.allItems = allItems
-        self.itemMapByMemberId = itemMapByMemberId
+        self.itemMapByItemId = itemMapByItemId
+        # self.itemMapByMemberId = itemMapByMemberId
         self.LogI(f"聖誕節 全部的故事總數:{len(allItems)}")
 
     async def LoadLogs(self):
-        command = f"SELECT user_id, user_name, draw_user_id, draw_user_name, guess_user_id, guess_user_name FROM festival_2023_christmas_log_{self.bot.bot.botSettings.sqlPostfix}"
+        command = (f"SELECT item_id, draw_user_id, draw_user_name, guess_user_id, guess_user_name, bless_user_id, bless_user_name"
+                   f" FROM festival_2023_christmas_log_{self.bot.bot.botSettings.sqlPostfix}")
         selectData = self.bot.bot.sql.SimpleSelect(command)
         logMapByDrawId = {}
+        logMapByItemId = {}
         for rowData in selectData:
-            # 932817644954980392
-            if int(rowData[0]) not in self.itemMapByMemberId:
-                self.LogE(f"找不到對應成員id:{rowData[0]}")
+            if int(rowData[0]) not in self.itemMapByItemId:
+                self.LogE(f"找不到對應item id:{rowData[0]}")
                 continue
             log = DrawLog()
-            log.item = self.itemMapByMemberId[int(rowData[0])]
-            log.drawMember = await self.GetMebmerById(int(rowData[2]))
-            if rowData[4] == None:
-                log.guessMember = None
-            else:
-                log.guessMember = await self.GetMebmerById(int(rowData[4]))
+            log.item = self.itemMapByItemId[int(rowData[0])]
+            log.drawMember = await self.GetMebmerById(int(rowData[1]))
+            log.guessMember = None
+            log.blessMember = None
+            if rowData[3] != None:
+                log.guessMember = await self.GetMebmerById(int(rowData[3]))
+                if rowData[5] != None:
+                    log.blessMember = await self.GetMebmerById(int(rowData[5]))
             logMapByDrawId[log.drawMember.id] = log
+            logMapByItemId[log.item.id] = log
         self.logMapByDrawId = logMapByDrawId
         self.LogI(f"聖誕節 已抽過的故事總數:{len(logMapByDrawId)}")
 
@@ -118,38 +125,41 @@ class CogChristmas2023(CogBase):
         if len(self.allItems) <= 0:
             self.LogE("資料錯誤")
             return
-        index = -1
         if onlyNever:
-            size = len(self.allItems) - len(self.itemState)
-            shift = random.randrange(size)
+            chooseArray = []
             for index in range(len(self.allItems)):
-                if self.allItems[index].member in self.itemState:
-                    pass
-                else:
-                    if shift == 0:
-                        chooseIndex = index
-                        break
-                    else:
-                        shift += -1
+                item = self.allItems[index]
+                if item.id not in self.logMapByItemId:
+                    # 沒抽過
+                    chooseArray.append(index)
+
+            size = len(chooseArray)
+            chooseIndex = chooseArray[random.randrange(size)]
         else:
             chooseIndex = random.randrange(len(self.allItems))
-        self.itemState[self.allItems[chooseIndex].member] = True
         return self.allItems[chooseIndex]
 
     def InsertDrawLog(self, item: ChristmasItem, drawMember: discord.Member):
-        member = item.member
+        log = DrawLog()
+        log.item = item
+        log.drawMember = drawMember
+        log.guessMember = None
+        log.blessMember = None
+        self.logMapByDrawId[drawMember.id] = log
         command = (f"INSERT INTO festival_2023_christmas_log_{self.bot.bot.botSettings.sqlPostfix}"
-                   "(user_id, user_name, draw_user_id, draw_user_name)"
-                   "VALUES (%s, %s, %s, %s);")
-        # command = (f"INSERT INTO festival_2023_christmas_log_{self.bot.bot.botSettings.sqlPostfix}"
-        #            "(user_id, user_name, draw_user_id, draw_user_name, guess_user_id, guess_user_name)"
-        #            "VALUES (%s, %s, %s, %s, %s, %s);")
-
+                   "(item_id, draw_user_id, draw_user_name)"
+                   "VALUES (%s, %s, %s);")
         self.bot.bot.sql.SimpleCommand(
-            command, (member.id, member.name, drawMember.id, drawMember.name))
+            command, (item.id, drawMember.id, drawMember.name))
 
-    def UpdateGuessLog(self, drawMember: discord.Member):
-        pass
+    def UpdateGuessLog(self, log: DrawLog,  guessMember: discord.Member, blessMember: discord.Member):
+        command = (f"UPDATE festival_2023_christmas_log_{self.bot.bot.botSettings.sqlPostfix}"
+                   f" SET guess_user_id=%s, guess_user_name=%s, bless_user_id=%s, bless_user_name=%s "
+                   f" WHERE item_id = %s")
+        log.guessMember = guessMember
+        log.blessMember = blessMember
+        self.bot.bot.sql.SimpleCommand(
+            command, (guessMember.id, guessMember.name, blessMember.id, blessMember.name, log.item.id))
 
     def GetNewNick(self, member: discord.Member, item: ChristmasItem) -> str:
         return item.bless + member.display_name
@@ -168,7 +178,7 @@ class CogChristmas2023(CogBase):
             return
         if commandMember.id in self.logMapByDrawId:
             msg = "你已經抽過了故事，抽到的故事："
-            item = self.logMapByDrawId[commandMember.id]
+            item = self.logMapByDrawId[commandMember.id].item
         else:
             msg = "抽到的故事："
             item = self.GetRandomItem(onlyNever=False)
@@ -196,31 +206,39 @@ class CogChristmas2023(CogBase):
         drawLog: DrawLog = self.logMapByDrawId[commandMember.id]
         item = drawLog.item
         successful = True
-        if drawLog.guessMember != None:
-            await ctx.respond("已經猜過了喔")
+        neverGuess = drawLog.guessMember == None
+        if not neverGuess:
+            await ctx.respond(f"已經猜過了喔，猜測的人是{drawLog.guessMember.display_name}({drawLog.guessMember.name})")
+            successful = drawLog.guessMember == item.member
         else:
-            self.UpdateGuessLog(guessMember)
             await ctx.respond(f"猜測的人是{guessMember.display_name}({guessMember.name})")
             if item.member != guessMember:
                 successful = False
-        blessMember = None
-        if successful:
-            await ctx.respond(f"答對了，獲得祝福")
+        blessMember = commandMember
+        flip = False
+        if successful ^ flip:
+            await ctx.respond(f"答對了，獲得祝福「{item.bless}」")
             blessMember = commandMember
         else:
             await ctx.respond(f"猜錯了，故事的主人是{item.member.display_name}({item.member.name})")
-            blessMember = self.allItems[random.randrange(
-                len(self.allItems))].member
-            await ctx.respond(f"祝福飛往了{blessMember.display_name}({blessMember.name})")
+            if neverGuess:
+                while blessMember == commandMember:
+                    blessMember = self.allItems[random.randrange(
+                        len(self.allItems))].member
+            else:
+                blessMember = drawLog.blessMember
+            await ctx.respond(f"祝福「{item.bless}」飛往了{blessMember.display_name}({blessMember.name})")
 
-        newNick = self.GetNewNick(blessMember, item)
-        if len(newNick) > 32:
-            await ctx.respond(f'暱稱太長了！祝福「{item.bless}」飛走了')
-        elif blessMember == self.bot.GetGuild().owner:
-            await ctx.respond(f'伺服器擁有者不能改名！！！')
-        else:
-            self.LogI(f"暱稱更新'{blessMember.display_name}' -> '{newNick}'")
-            await blessMember.edit(nick=newNick)
+        if neverGuess:
+            self.UpdateGuessLog(drawLog, guessMember, blessMember)
+            newNick = self.GetNewNick(blessMember, item)
+            if len(newNick) > 32:
+                await ctx.respond(f'暱稱太長了！祝福「{item.bless}」飛走了')
+            elif blessMember == self.bot.GetGuild().owner:
+                await ctx.respond(f'伺服器擁有者不能改名！！！')
+            else:
+                self.LogI(f"暱稱更新'{blessMember.display_name}' -> '{newNick}'")
+                await blessMember.edit(nick=newNick)
 
 
 def setup(bot):
