@@ -13,11 +13,6 @@ from Bot.SlashCommand.CommandsBot import CommandsBot
 # 暱稱冠上祝福，猜中-冠上自己，猜錯-冠上隨機一人
 # (選用功能)：有「是否為處罰」欄位-若為真或1，上方猜中與猜錯結果相反
 
-TEST_USER_LIST = [
-    824282959572893696,
-    160763041447804938,
-]
-
 
 class ChristmasItem:
     id: int
@@ -39,7 +34,6 @@ class CogChristmas2023(CogBase):
     # 輔助搜尋
     itemMapByItemId = {}
     logMapByDrawId = {}
-    logMapByItemId = {}
 
     def __init__(self, bot: CommandsBot):
         super().__init__(bot)
@@ -84,7 +78,6 @@ class CogChristmas2023(CogBase):
                    f" FROM festival_2023_christmas_log_{self.bot.bot.botSettings.sqlPostfix}")
         selectData = self.bot.bot.sql.SimpleSelect(command)
         logMapByDrawId = {}
-        logMapByItemId = {}
         for rowData in selectData:
             if int(rowData[0]) not in self.itemMapByItemId:
                 self.LogE(f"找不到對應item id:{rowData[0]}")
@@ -99,9 +92,8 @@ class CogChristmas2023(CogBase):
                 if rowData[5] != None:
                     log.blessMember = await self.GetMebmerById(int(rowData[5]))
             logMapByDrawId[log.drawMember.id] = log
-            logMapByItemId[log.item.id] = log
         self.logMapByDrawId = logMapByDrawId
-        self.LogI(f"聖誕節 已抽過的故事總數:{len(logMapByDrawId)}")
+        self.LogI(f"聖誕節 已抽過的故事人數:{len(logMapByDrawId)}")
 
     def LoadSearchDatas(self):
         # guild: discord.Guild = self.bot.bot.GetGuild()
@@ -125,18 +117,7 @@ class CogChristmas2023(CogBase):
         if len(self.allItems) <= 0:
             self.LogE("資料錯誤")
             return
-        if onlyNever:
-            chooseArray = []
-            for index in range(len(self.allItems)):
-                item = self.allItems[index]
-                if item.id not in self.logMapByItemId:
-                    # 沒抽過
-                    chooseArray.append(index)
-
-            size = len(chooseArray)
-            chooseIndex = chooseArray[random.randrange(size)]
-        else:
-            chooseIndex = random.randrange(len(self.allItems))
+        chooseIndex = random.randrange(len(self.allItems))
         return self.allItems[chooseIndex]
 
     def InsertDrawLog(self, item: ChristmasItem, drawMember: discord.Member):
@@ -165,20 +146,15 @@ class CogChristmas2023(CogBase):
         return item.bless + member.display_name
 
     christmasGroup = SlashCommandGroup("聖誕節2023", "聖誕節的祝福指令")
-    # christmasGroup = SlashCommandGroup("測試群組1212", "測試用的群組說明文字")
 
     @christmasGroup.command(name="抽取故事", description="抽出故事")
-    # @christmasGroup.command(name="測試指令01", description="測試指令1的說明")
     async def draw(self, ctx: discord.ApplicationContext):
         commandMember = await self.GetMebmerById(ctx.user.id)
-        if commandMember.id not in TEST_USER_LIST:
-            self.LogI(
-                f"{commandMember.display_name}({commandMember.name}) 使用指令 draw")
-            await ctx.respond("非測試人員請勿使用", ephemeral=True)
-            return
+        log = None
         if commandMember.id in self.logMapByDrawId:
             msg = "你已經抽過了故事，抽到的故事："
-            item = self.logMapByDrawId[commandMember.id].item
+            log = self.logMapByDrawId[commandMember.id]
+            item = log.item
         else:
             msg = "抽到的故事："
             item = self.GetRandomItem(onlyNever=False)
@@ -186,19 +162,13 @@ class CogChristmas2023(CogBase):
 
         await ctx.respond(msg)
         await ctx.respond(f"{item.story}")
-        await ctx.respond(f"接下來請使用指令猜測故事的主人")
+        if log == None or log.guessMember == None:
+            await ctx.respond(f"接下來請使用指令猜測故事的主人")
 
     @christmasGroup.command(name="猜測", description="故事的主人")
-    # @christmasGroup.command(name="測試指令02",description="測試指令2的說明")
     async def guess(self, ctx: discord.ApplicationContext, guess: discord.Member):
         guessMember = guess
         commandMember = await self.GetMebmerById(ctx.user.id)
-        if commandMember.id not in TEST_USER_LIST:
-            self.LogI(
-                f"{commandMember.display_name}({commandMember.name}) 使用指令 guess")
-            await ctx.respond("非測試人員請勿使用", ephemeral=True)
-            return
-
         if commandMember.id not in self.logMapByDrawId:
             await ctx.respond("請先抽過故事再猜")
             return
@@ -214,31 +184,40 @@ class CogChristmas2023(CogBase):
             await ctx.respond(f"猜測的人是{guessMember.display_name}({guessMember.name})")
             if item.member != guessMember:
                 successful = False
-        blessMember = commandMember
+        blessMemberList = [commandMember]
         flip = False
         if successful ^ flip:
             await ctx.respond(f"答對了，獲得祝福「{item.bless}」")
-            blessMember = commandMember
+            blessMemberList = [item.member, commandMember]
         else:
             await ctx.respond(f"猜錯了，故事的主人是{item.member.display_name}({item.member.name})")
             if neverGuess:
-                while blessMember == commandMember:
-                    blessMember = self.allItems[random.randrange(
+                testCount = 0
+                while blessMemberList[0] == commandMember and testCount < 100:
+                    testCount += 1
+                    blessMemberList[0] = self.allItems[random.randrange(
                         len(self.allItems))].member
+                if testCount == 100:
+                    self.LogW(f"失敗次數過多 {blessMemberList[0].display_name}({blessMemberList[0].name})")
             else:
-                blessMember = drawLog.blessMember
-            await ctx.respond(f"祝福「{item.bless}」飛往了{blessMember.display_name}({blessMember.name})")
+                if successful:
+                    blessMemberList = [item.member, commandMember]
+                else:
+                    blessMemberList = [drawLog.blessMember]
+            await ctx.respond(f"祝福「{item.bless}」飛往了{blessMemberList[0].display_name}({blessMemberList[0].name})")
 
         if neverGuess:
-            self.UpdateGuessLog(drawLog, guessMember, blessMember)
-            newNick = self.GetNewNick(blessMember, item)
-            if len(newNick) > 32:
-                await ctx.respond(f'暱稱太長了！祝福「{item.bless}」飛走了')
-            elif blessMember == self.bot.GetGuild().owner:
-                await ctx.respond(f'伺服器擁有者不能改名！！！')
-            else:
-                self.LogI(f"暱稱更新'{blessMember.display_name}' -> '{newNick}'")
-                await blessMember.edit(nick=newNick)
+            self.UpdateGuessLog(drawLog, guessMember, blessMemberList[0])
+            for blessMember in blessMemberList:
+                newNick = self.GetNewNick(blessMember, item)
+                if len(newNick) > 32:
+                    await ctx.respond(f'暱稱太長了！祝福「{item.bless}」飛走了')
+                elif blessMember == self.bot.GetGuild().owner:
+                    await ctx.respond(f'伺服器擁有者不能改名！！！')
+                else:
+                    self.LogI(f"暱稱更新'{blessMember.display_name}' -> '{newNick}'")
+                    # await blessMember.edit(nick=newNick)
+                    await ctx.respond(f'測試版本不會更新！！！')
 
 
 def setup(bot):
