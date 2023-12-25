@@ -21,7 +21,7 @@ class ChristmasItem:
     member: discord.Member
     story: str
     bless: str
-    image: str
+    images: list
 
 
 class DrawLog:
@@ -63,10 +63,12 @@ class CogChristmas2023(CogBase):
         item.member = member
         item.bless = rowData[2]
         item.story = rowData[3]
-        item.image = rowData[4]
+        item.images = [rowData[4], rowData[5], rowData[6]]
+        while item.images[-1] == None:
+            item.images.pop()
 
     async def LoadItems(self):
-        command = f"SELECT id, user, bless, story, image FROM festival_2023_christmas_item_{self.bot.bot.botSettings.sqlPostfix}"
+        command = f"SELECT id, user, bless, story, image1, image2, image3 FROM festival_2023_christmas_item_{self.bot.bot.botSettings.sqlPostfix}"
         selectData = self.bot.bot.sql.SimpleSelect(command)
         allItems = []
         itemMapByItemId = {}
@@ -158,6 +160,9 @@ class CogChristmas2023(CogBase):
 
     @christmasGroup.command(name="抽取故事", description="抽出故事")
     async def draw(self, ctx: discord.ApplicationContext):
+        if ctx.channel_id != 1159755127951986740:
+            await ctx.respond("這個頻道不開放此指令喔！", ephemeral=True)
+            return
         commandMember = await self.GetMebmerById(ctx.user.id)
         log = None
         if commandMember.id in self.logMapByDrawId:
@@ -169,9 +174,17 @@ class CogChristmas2023(CogBase):
             item = self.GetRandomItem(onlyNever=False)
             self.InsertDrawLog(item=item, drawMember=commandMember)
 
-        embed = discord.Embed(title=msg)
-        embed.set_image(url=item.image)
-        await ctx.respond(embed=embed)
+        embeds = []
+        page = 0
+        for image in item.images:
+            if image == None:
+                continue
+            page += 1
+            embed = discord.Embed(
+                title=msg, description=f"({page}/{len(item.images)})")
+            embed.set_image(url=image)
+            embeds.append(embed)
+        await ctx.respond(embeds=embeds)
 
         # await ctx.respond(f"{item.story}")
         if log == None or log.guessMember == None:
@@ -179,6 +192,9 @@ class CogChristmas2023(CogBase):
 
     @christmasGroup.command(name="猜測", description="故事的主人")
     async def guess(self, ctx: discord.ApplicationContext, guess: discord.Member):
+        if ctx.channel_id != 1159755127951986740:
+            await ctx.respond("這個頻道不開放此指令喔！", ephemeral=True)
+            return
         guessMember = guess
         commandMember = await self.GetMebmerById(ctx.user.id)
         if commandMember.id not in self.logMapByDrawId:
