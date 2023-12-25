@@ -13,12 +13,15 @@ from Bot.SlashCommand.CommandsBot import CommandsBot
 # 暱稱冠上祝福，猜中-冠上自己，猜錯-冠上隨機一人
 # (選用功能)：有「是否為處罰」欄位-若為真或1，上方猜中與猜錯結果相反
 
+HIDE_MEMBER = None
+
 
 class ChristmasItem:
     id: int
     member: discord.Member
     story: str
     bless: str
+    image: str
 
 
 class DrawLog:
@@ -39,25 +42,31 @@ class CogChristmas2023(CogBase):
         super().__init__(bot)
 
     async def Initial(self) -> bool:
+        global HIDE_MEMBER
         if not super().Initial():
             return False
         await self.LoadItems()
         await self.LoadLogs()
         self.LoadSearchDatas()
+        HIDE_MEMBER = self.bot.user
 
     async def SetItem(self, item: ChristmasItem, rowData):
         account = rowData[1]
-        member = await self.GetMemberByAccount(account)
-        if member == None:
-            self.LogE(f"找不到成員：{account}")
-            return
+        if account == None:
+            member = HIDE_MEMBER
+        else:
+            member = await self.GetMemberByAccount(account)
+            if member == None:
+                self.LogE(f"找不到成員：{account}")
+                return
         item.id = int(rowData[0])
         item.member = member
         item.bless = rowData[2]
         item.story = rowData[3]
+        item.image = rowData[4]
 
     async def LoadItems(self):
-        command = f"SELECT id, user, bless, story FROM festival_2023_christmas_item_{self.bot.bot.botSettings.sqlPostfix}"
+        command = f"SELECT id, user, bless, story, image FROM festival_2023_christmas_item_{self.bot.bot.botSettings.sqlPostfix}"
         selectData = self.bot.bot.sql.SimpleSelect(command)
         allItems = []
         itemMapByItemId = {}
@@ -160,8 +169,11 @@ class CogChristmas2023(CogBase):
             item = self.GetRandomItem(onlyNever=False)
             self.InsertDrawLog(item=item, drawMember=commandMember)
 
-        await ctx.respond(msg)
-        await ctx.respond(f"{item.story}")
+        embed = discord.Embed(title=msg)
+        embed.set_image(url=item.image)
+        await ctx.respond(embed=embed)
+
+        # await ctx.respond(f"{item.story}")
         if log == None or log.guessMember == None:
             await ctx.respond(f"接下來請使用指令猜測故事的主人")
 
@@ -190,7 +202,10 @@ class CogChristmas2023(CogBase):
             await ctx.respond(f"答對了，獲得祝福「{item.bless}」")
             blessMemberList = [item.member, commandMember]
         else:
-            await ctx.respond(f"猜錯了，故事的主人是{item.member.display_name}({item.member.name})")
+            if item.member == None or item.member == HIDE_MEMBER:
+                await ctx.respond(f"猜錯了，故事的主人匿名啦，哈哈")
+            else:
+                await ctx.respond(f"猜錯了，故事的主人是{item.member.display_name}({item.member.name})")
             if neverGuess:
                 testCount = 0
                 while blessMemberList[0] == commandMember and testCount < 100:
@@ -198,7 +213,8 @@ class CogChristmas2023(CogBase):
                     blessMemberList[0] = self.allItems[random.randrange(
                         len(self.allItems))].member
                 if testCount == 100:
-                    self.LogW(f"失敗次數過多 {blessMemberList[0].display_name}({blessMemberList[0].name})")
+                    self.LogW(
+                        f"失敗次數過多 {blessMemberList[0].display_name}({blessMemberList[0].name})")
             else:
                 if successful:
                     blessMemberList = [item.member, commandMember]
@@ -209,15 +225,18 @@ class CogChristmas2023(CogBase):
         if neverGuess:
             self.UpdateGuessLog(drawLog, guessMember, blessMemberList[0])
             for blessMember in blessMemberList:
+                if blessMember == None or blessMember == HIDE_MEMBER:
+                    continue
                 newNick = self.GetNewNick(blessMember, item)
                 if len(newNick) > 32:
                     await ctx.respond(f'暱稱太長了！祝福「{item.bless}」飛走了')
                 elif blessMember == self.bot.GetGuild().owner:
                     await ctx.respond(f'伺服器擁有者不能改名！！！')
                 else:
-                    self.LogI(f"暱稱更新'{blessMember.display_name}' -> '{newNick}'")
-                    # await blessMember.edit(nick=newNick)
-                    await ctx.respond(f'測試版本不會更新！！！')
+                    self.LogI(
+                        f"暱稱更新'{blessMember.display_name}' -> '{newNick}'")
+                    await blessMember.edit(nick=newNick)
+                    # await ctx.respond(f'測試版本不會更新！！！')
 
 
 def setup(bot):
