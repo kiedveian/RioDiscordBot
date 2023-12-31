@@ -89,3 +89,4 @@ class BotSettings:
         self.SetDict(trans_data, "idiomChannel", "IDIOM_CHANNEL_ID", 0)
         self.SetDict(trans_data, "idiomCooldownSecond", "IDIOM_COOLDOWN_SECOND", 0)
 
+        self.SetDict(trans_data, "festivalChannel", "FESTIVAL_CHANNEL", 0)

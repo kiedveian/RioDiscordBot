@@ -156,12 +156,12 @@ class CogChristmas2023(CogBase):
     def GetNewNick(self, member: discord.Member, item: ChristmasItem) -> str:
         return item.bless + member.display_name
 
-    christmasGroup = SlashCommandGroup("聖誕節2023", "聖誕節的祝福指令")
+    christmasGroup = SlashCommandGroup("聖誕節", "聖誕節的祝福指令")
 
     @christmasGroup.command(name="抽取故事", description="抽出故事")
     async def draw(self, ctx: discord.ApplicationContext):
-        if ctx.channel_id != 1159755127951986740:
-            await ctx.respond("這個頻道不開放此指令喔！", ephemeral=True)
+        if ctx.channel_id != self.bot.bot.botSettings.festivalChannel:
+            await ctx.respond(f"請至{self.bot.bot.botSettings.festivalChannel}下指令", ephemeral=True)
             return
         commandMember = await self.GetMebmerById(ctx.user.id)
         log = None
@@ -180,8 +180,11 @@ class CogChristmas2023(CogBase):
             if image == None:
                 continue
             page += 1
-            embed = discord.Embed(
-                title=msg, description=f"({page}/{len(item.images)})")
+            if page == 1:
+                embed = discord.Embed(title=msg)
+            else:
+                embed = discord.Embed(
+                title=f"({page}/{len(item.images)})")
             embed.set_image(url=image)
             embeds.append(embed)
         await ctx.respond(embeds=embeds)
@@ -192,8 +195,8 @@ class CogChristmas2023(CogBase):
 
     @christmasGroup.command(name="猜測", description="故事的主人")
     async def guess(self, ctx: discord.ApplicationContext, guess: discord.Member):
-        if ctx.channel_id != 1159755127951986740:
-            await ctx.respond("這個頻道不開放此指令喔！", ephemeral=True)
+        if ctx.channel_id != self.bot.bot.botSettings.festivalChannel:
+            await ctx.respond(f"請至<#{self.bot.bot.botSettings.festivalChannel}>下指令！", ephemeral=True)
             return
         guessMember = guess
         commandMember = await self.GetMebmerById(ctx.user.id)
@@ -221,10 +224,10 @@ class CogChristmas2023(CogBase):
             if item.member == None or item.member == HIDE_MEMBER:
                 await ctx.respond(f"猜錯了，故事的主人匿名啦，哈哈")
             else:
-                await ctx.respond(f"猜錯了，故事的主人是{item.member.display_name}({item.member.name})")
+                await ctx.respond(f"猜錯了")
             if neverGuess:
                 testCount = 0
-                while blessMemberList[0] == commandMember and testCount < 100:
+                while testCount < 100 and (blessMemberList[0] == commandMember or blessMemberList[0] == HIDE_MEMBER):
                     testCount += 1
                     blessMemberList[0] = self.allItems[random.randrange(
                         len(self.allItems))].member
