@@ -161,7 +161,7 @@ class CogChristmas2023(CogBase):
     @christmasGroup.command(name="抽取故事", description="抽出故事")
     async def draw(self, ctx: discord.ApplicationContext):
         if ctx.channel_id != self.bot.bot.botSettings.festivalChannel:
-            await ctx.respond(f"請至{self.bot.bot.botSettings.festivalChannel}下指令", ephemeral=True)
+            await ctx.respond(f"請至<#{self.bot.bot.botSettings.festivalChannel}>下指令", ephemeral=True)
             return
         commandMember = await self.GetMebmerById(ctx.user.id)
         log = None
