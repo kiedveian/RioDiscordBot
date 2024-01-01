@@ -5,9 +5,10 @@ import re
 
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 
 
-class CompRandom(CompBotBase):
+class CompRandom(CompBase):
     commandKey = "!隨機"
 
     def Initial(self) -> bool:

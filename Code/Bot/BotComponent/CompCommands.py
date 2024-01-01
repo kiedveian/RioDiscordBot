@@ -4,11 +4,12 @@ import datetime
 import re
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 
 SQL_TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-class CompCommands(CompBotBase):
+class CompCommands(CompBase):
     commandColseAll = ""
     commandColseTime = ""
 

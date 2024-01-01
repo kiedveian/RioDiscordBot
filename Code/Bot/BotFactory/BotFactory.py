@@ -6,7 +6,7 @@ from Bot.BotFactory.BotTest import BotTest
 from Utility.DebugTool import Log
 
 
-def CreateBot(name: str) -> BotBase:
+def CreateBot(name: str):
     match name:
         case "nerolirain":
             return BotNerolirain()

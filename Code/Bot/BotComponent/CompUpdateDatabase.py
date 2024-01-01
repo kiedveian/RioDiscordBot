@@ -2,9 +2,10 @@
 
 import datetime
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 
 
-class CompUpdateDatabase(CompBotBase):
+class CompUpdateDatabase(CompBase):
 
     def SetComponents(self, bot):
         return super().SetComponents(bot)

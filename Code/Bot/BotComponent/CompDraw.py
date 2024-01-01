@@ -7,6 +7,7 @@ import re
 import discord
 
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 from Bot.BotComponent.CompUsers import CompUsers
 from Bot.BotComponent.CompClose import CompClose
 from Bot.BotComponent.CompClose import CloseType
@@ -41,7 +42,7 @@ class DrawItem:
         return self.id == DRAW_BLACK_HOUSE_ID
 
 
-class CompDraw(CompBotBase):
+class CompDraw(CompBase):
     weightSum: int = 0
     allItems = []
     currentItems = []

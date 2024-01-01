@@ -4,7 +4,8 @@ import datetime
 import re
 import threading
 import discord
-from Bot.BotComponent.Base.CompBotBase import CompBotBase
+# from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 from Bot.BotComponent.CompUsers import CompUsers
 
 CLOSE_REFLECTION_SHIFT = 1000
@@ -44,7 +45,7 @@ class CloseData:
         self.userString = ""
 
 
-class CompClose(CompBotBase):
+class CompClose(CompBase):
     cacheReleaseTime = {}
     processCount: int = 0
 
@@ -55,6 +56,9 @@ class CompClose(CompBotBase):
         super().SetComponents(bot)
         self.compUsers = bot.GetComponent("compUsers")
         return
+
+    def CanInitial(self) -> bool:
+        return super().CanInitial() and self.compUsers != None and self.compUsers.IsInitialized()
 
     def Initial(self) -> bool:
         if not super().Initial():
@@ -70,7 +74,6 @@ class CompClose(CompBotBase):
                                       " (%s, %s, %s, %s, %s, %s, %s)")
 
         self.UpdateReleaseTime()
-
         return True
 
     def UpdateReleaseTime(self):

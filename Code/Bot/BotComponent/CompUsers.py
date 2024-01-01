@@ -5,6 +5,7 @@ import re
 
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 
 
 class UserData:
@@ -23,7 +24,7 @@ class UserData:
 NEW_USER_TICKET_AMOUNT = 3
 
 
-class CompUsers(CompBotBase):
+class CompUsers(CompBase):
     cacheUsers = {}
 
     def Initial(self) -> bool:

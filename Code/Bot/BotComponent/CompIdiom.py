@@ -6,6 +6,7 @@ import re
 
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 
 
 class IdiomItem():
@@ -25,7 +26,7 @@ class IdiomLog():
     nextTime: datetime.datetime
 
 
-class CompIdiom(CompBotBase):
+class CompIdiom(CompBase):
     allItems = []
     allLogs = {}
     cooldownDelta: datetime.timedelta = None

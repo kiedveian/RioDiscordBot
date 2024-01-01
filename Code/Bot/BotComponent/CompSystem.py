@@ -1,9 +1,10 @@
 
 
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 
 
-class CompSystem(CompBotBase):
+class CompSystem(CompBase):
     updateSecond: int = 10
     secondCount:int = 0
 

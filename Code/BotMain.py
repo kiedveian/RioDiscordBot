@@ -50,7 +50,7 @@ def MyMain(argv):
     else:
         g_bot.SetData(postfix)
         # asyncio.run(RunTask())
-        g_bot.botClient.run(g_bot.botSettings.botToken)
+        g_bot.Start()
 
 
 if __name__ == '__main__':

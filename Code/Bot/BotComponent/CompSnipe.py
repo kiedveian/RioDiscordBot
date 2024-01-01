@@ -3,10 +3,11 @@
 import re
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 from Utility.EmbedTool import GetPreviewUrl
 
 
-class CompSnipe(CompBotBase):
+class CompSnipe(CompBase):
     removeMessages = {}
     editMessages = {}
 

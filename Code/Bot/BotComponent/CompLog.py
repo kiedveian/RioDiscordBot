@@ -2,13 +2,14 @@
 
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
+from Bot.NewVersionTemp.CompBase2024 import CompBase
 
 
 GET_STICKER_COMMAND = "SELECT sticker_id FROM all_sticker"
 INSERT_STICKER_COMMAND = "INSERT INTO all_sticker(sticker_id, guild_id, name) VALUES (%s, %s, %s)"
 
 
-class CompLog(CompBotBase):
+class CompLog(CompBase):
     allSticker: set
     insertMessageCommand: str = ""
     insertReactionCommand: str = ""
