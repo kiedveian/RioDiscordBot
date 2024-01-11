@@ -41,7 +41,6 @@ class BotBase:
         self._SetBaseUtility(sqlPostfix)
         self._SetAllBaseData()
         self._SetAllComponents()
-        self._AddSlashCommands()
 
     def _SetBaseUtility(self, sqlPostfix):
         self.allComp["botEvent"] = self
@@ -76,9 +75,6 @@ class BotBase:
         self._AddAllComponents()
         self._SetAllComponentInitial()
         self._SetAllComponentEvnets()
-
-    def _AddSlashCommands(self):
-        pass
 
     def _AddAllComponents(self):
         # 加入需要的組件

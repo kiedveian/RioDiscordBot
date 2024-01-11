@@ -14,6 +14,7 @@ from Bot.BotComponent.CompUpdateDatabase import CompUpdateDatabase
 from Bot.BotComponent.CompUsers import CompUsers
 from Bot.BotComponent.CompCommands import CompCommands
 from Bot.CogFestival.CogChristmas2023 import CogChristmas2023
+from Bot.Cogs.SlashCommandsManager import SlashCommandManager
 
 
 class BotNerolirain(BotBase):
@@ -32,12 +33,8 @@ class BotNerolirain(BotBase):
         self.AddComponent("compRandom", CompRandom())
         self.AddComponent("compCommands", CompCommands())
 
+        self.AddCog("SlashCommand", SlashCommandManager())
         self.AddCog("Christmas2023", CogChristmas2023())
         # self.AddCog("Christmas2023", CogChristmas2023(self))
 
         # self.load_extension(f"Bot.CogFestival.CogChristmas2023")
-
-    # def _AddSlashCommands(self):
-    #     super()._AddSlashCommands()
-
-    #     self.botClient.load_extension(f"Bot.CogFestival.CogChristmas2023")

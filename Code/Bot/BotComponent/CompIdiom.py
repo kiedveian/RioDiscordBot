@@ -165,3 +165,12 @@ class CompIdiom(CompBase):
                 await message.reply("沒有賜福記錄", mention_author=False)
             else:
                 await message.reply(">".join(datas), mention_author=False)
+
+    async def idiom_history(self, ctx: discord.ApplicationContext, count: int = 10):
+        datas = self.GetUserAllIdiom(ctx.author.id)
+        if count > 0 and len(datas) > count:
+            datas = datas[:count]
+        if len(datas) == 0:
+            await ctx.respond("沒有賜福記錄")
+        else:
+            await ctx.respond(">".join(datas))
