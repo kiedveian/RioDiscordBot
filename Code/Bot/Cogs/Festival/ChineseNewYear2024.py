@@ -1,5 +1,6 @@
 
 
+import datetime
 import random
 import discord
 from Bot.NewVersionTemp.CompBase2024 import CompBase
@@ -30,6 +31,7 @@ class DrawLog:
 
 class CogChineseNewYear2024(CompBase):
     allItems = []
+    cacheBlessMembers = []
 
     def Initial(self) -> bool:
         if not super().Initial():
@@ -41,6 +43,7 @@ class CogChineseNewYear2024(CompBase):
         global HIDE_MEMBER
         await self.LoadItems()
         await self.LoadLogs()
+        self.LoadBlessMemebers(30)
         HIDE_MEMBER = self.botClient.user
 
     async def SetItem(self, item: FestivalItem, rowData):
@@ -96,6 +99,20 @@ class CogChineseNewYear2024(CompBase):
         self.logMapByDrawId = logMapByDrawId
         self.LogI(f"新年 已抽過的目標人數:{len(logMapByDrawId)}")
 
+    def LoadBlessMemebers(self, days=30):
+        blessMembers = []
+        checkTime = datetime.datetime.now() - datetime.timedelta(days=days)
+        timeString = checkTime.strftime("%Y-%m-%d")
+        self.LogI(f"抓取日期{timeString}之後的成員")
+        command = (f'SELECT member_id FROM discord_bot.message_log_{self.botSettings.sqlPostfix} '
+                   f' WHERE create_time >= "{timeString}" AND guild_id = {self.botClient.GetGuild().id} '
+                   f' GROUP BY member_id;')
+        selectData = self.sql.SimpleSelect(command)
+        for rowData in selectData:
+            blessMembers.append(rowData[0])
+        self.cacheBlessMembers = blessMembers
+        self.LogI(f"新年 隨機飛往祝福的成員總數:{len(self.cacheBlessMembers)}")
+
     async def GetMemberByAccount(self, account: str) -> discord.Member:
         member = self.botClient.GetGuild().get_member_named(account)
         if member == None:
@@ -105,7 +122,11 @@ class CogChineseNewYear2024(CompBase):
     async def GetMebmerById(self, id: int) -> discord.Member:
         member = self.botClient.GetGuild().get_member(id)
         if member == None:
-            member = await self.botClient.GetGuild().fetch_member(id)
+            try:
+                member = await self.botClient.GetGuild().fetch_member(id)
+            except discord.NotFound:
+                self.LogI(f"找不到id: {id}")
+                return None
         return member
 
     def GetRandomItem(self, onlyNever=True, skipUser=None) -> FestivalItem:
@@ -114,6 +135,11 @@ class CogChineseNewYear2024(CompBase):
             return
         chooseIndex = random.randrange(len(self.allItems))
         return self.allItems[chooseIndex]
+
+    async def GetRandomBlessMember(self):
+        chooseIndex = random.randrange(len(self.cacheBlessMembers))
+        memberId = self.cacheBlessMembers[chooseIndex]
+        return await self.GetMebmerById(memberId)
 
     def InsertDrawLog(self, item: FestivalItem, drawMember: discord.Member):
         log = DrawLog()
@@ -196,13 +222,13 @@ class CogChineseNewYear2024(CompBase):
                 await ctx.respond(f"猜錯了")
             if neverGuess:
                 testCount = 0
-                while testCount < 100 and (blessMemberList[0] == commandMember or blessMemberList[0] == HIDE_MEMBER):
+                member = None
+                while testCount < 100 and (member == None or member == commandMember or member == HIDE_MEMBER):
                     testCount += 1
-                    blessMemberList[0] = self.allItems[random.randrange(
-                        len(self.allItems))].member
+                    member = await self.GetRandomBlessMember()
                 if testCount == 100:
-                    self.LogW(
-                        f"失敗次數過多 {blessMemberList[0].display_name}({blessMemberList[0].name})")
+                    self.LogW(f"失敗次數過多")
+                blessMemberList[0] = member
             else:
                 if successful:
                     blessMemberList = [item.member, commandMember]
@@ -218,7 +244,7 @@ class CogChineseNewYear2024(CompBase):
                 newNick = self.GetNewNick(blessMember, item)
                 if len(newNick) > 32:
                     await ctx.respond(f'暱稱太長了！祝福「{item.bless}」飛走了')
-                elif blessMember == self.bot.GetGuild().owner:
+                elif blessMember == self.botClient.GetGuild().owner:
                     await ctx.respond(f'伺服器擁有者不能改名！！！')
                 else:
                     self.LogI(

@@ -249,7 +249,7 @@ class CogChristmas2023(CompBase):
                 newNick = self.GetNewNick(blessMember, item)
                 if len(newNick) > 32:
                     await ctx.respond(f'暱稱太長了！祝福「{item.bless}」飛走了')
-                elif blessMember == self.bot.GetGuild().owner:
+                elif blessMember == self.botClient.GetGuild().owner:
                     await ctx.respond(f'伺服器擁有者不能改名！！！')
                 else:
                     self.LogI(
