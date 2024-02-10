@@ -3,6 +3,8 @@
 import datetime
 import random
 import discord
+from discord.ext import pages
+
 from Bot.NewVersionTemp.CompBase2024 import CompBase
 
 # 由聖誕節2023複製修改而來，因此原本故事(story)為新的目標(target)
@@ -13,6 +15,9 @@ from Bot.NewVersionTemp.CompBase2024 import CompBase
 # (選用功能)：有「是否為處罰」欄位-若為真或1，上方猜中與猜錯結果相反
 
 HIDE_MEMBER = None
+
+COMMAND_DRAW = "新年-抽取目標"
+COMMAND_GUESS = "新年-猜測"
 
 
 class FestivalItem:
@@ -27,6 +32,10 @@ class DrawLog:
     drawMember: discord.Member
     guessMember: discord.Member
     blessMember: discord.Member
+    drawTime: datetime.datetime
+
+
+gCogObj = None
 
 
 class CogChineseNewYear2024(CompBase):
@@ -34,9 +43,12 @@ class CogChineseNewYear2024(CompBase):
     cacheBlessMembers = []
 
     def Initial(self) -> bool:
+        global gCogObj
         if not super().Initial():
             return False
         self.allEvent["on_ready"] = True
+        gCogObj = self
+
         return True
 
     async def on_ready(self) -> None:
@@ -78,7 +90,7 @@ class CogChineseNewYear2024(CompBase):
         self.LogI(f"新年 全部的目標總數:{len(allItems)}")
 
     async def LoadLogs(self):
-        command = (f"SELECT item_id, draw_user_id, draw_user_name, guess_user_id, guess_user_name, bless_user_id, bless_user_name"
+        command = (f"SELECT item_id, draw_user_id, draw_user_name, draw_time, guess_user_id, guess_user_name, bless_user_id, bless_user_name"
                    f" FROM festival_2024_chinese_new_year_log_{self.botSettings.sqlPostfix}")
         selectData = self.sql.SimpleSelect(command)
         logMapByDrawId = {}
@@ -89,12 +101,13 @@ class CogChineseNewYear2024(CompBase):
             log = DrawLog()
             log.item = self.itemMapByItemId[int(rowData[0])]
             log.drawMember = await self.GetMebmerById(int(rowData[1]))
+            log.drawTime = rowData[3]
             log.guessMember = None
             log.blessMember = None
-            if rowData[3] != None:
-                log.guessMember = await self.GetMebmerById(int(rowData[3]))
-                if rowData[5] != None:
-                    log.blessMember = await self.GetMebmerById(int(rowData[5]))
+            if rowData[4] != None:
+                log.guessMember = await self.GetMebmerById(int(rowData[4]))
+                if rowData[6] != None:
+                    log.blessMember = await self.GetMebmerById(int(rowData[6]))
             logMapByDrawId[log.drawMember.id] = log
         self.logMapByDrawId = logMapByDrawId
         self.LogI(f"新年 已抽過的目標人數:{len(logMapByDrawId)}")
@@ -145,14 +158,16 @@ class CogChineseNewYear2024(CompBase):
         log = DrawLog()
         log.item = item
         log.drawMember = drawMember
+        log.drawTime = datetime.datetime.now()
         log.guessMember = None
         log.blessMember = None
+        timeString = log.drawTime.strftime("%Y-%m-%d %H:%M:%S")
         self.logMapByDrawId[drawMember.id] = log
         command = (f"INSERT INTO festival_2024_chinese_new_year_log_{self.botSettings.sqlPostfix}"
-                   "(item_id, draw_user_id, draw_user_name)"
-                   "VALUES (%s, %s, %s);")
+                   "(item_id, draw_user_id, draw_user_name, draw_time)"
+                   "VALUES (%s, %s, %s, %s);")
         self.sql.SimpleCommand(
-            command, (item.id, drawMember.id, drawMember.name))
+            command, (item.id, drawMember.id, drawMember.name, timeString))
 
     def UpdateGuessLog(self, log: DrawLog,  guessMember: discord.Member, blessMember: discord.Member):
         command = (f"UPDATE festival_2024_chinese_new_year_log_{self.botSettings.sqlPostfix}"
@@ -166,29 +181,53 @@ class CogChineseNewYear2024(CompBase):
     def GetNewNick(self, member: discord.Member, item: FestivalItem) -> str:
         return item.bless + member.display_name
 
+    async def Respond(self, obj, *args, **kwargs):
+        if isinstance(obj, discord.ApplicationContext):
+            await obj.respond(*args, **kwargs)
+        elif isinstance(obj, discord.interactions.Interaction):
+            # await obj.response.send_message(*args, **kwargs)
+            await obj.followup.send(*args, **kwargs)
+
     festivalGroup = discord.SlashCommandGroup("節慶", "節慶相關指令")
 
-    @festivalGroup.command(name="新年-抽取目標", description="新年抽出目標")
-    async def draw(self, ctx: discord.ApplicationContext):
+    @festivalGroup.command(name=COMMAND_DRAW, description="新年抽出目標")
+    async def draw(self, ctx):
         if ctx.channel_id != self.botSettings.festivalChannel:
-            await ctx.respond(f"請至<#{self.botSettings.festivalChannel}>下指令", ephemeral=True)
+            await self.Respond(ctx, f"請至<#{self.botSettings.festivalChannel}>下指令", ephemeral=True)
             return
         commandMember = await self.GetMebmerById(ctx.user.id)
-        log = None
+        log: DrawLog = None
+        msg = None
+
+        ephemeral = False
         if commandMember.id in self.logMapByDrawId:
-            msg = "你已經抽過了目標，抽到的目標："
             log = self.logMapByDrawId[commandMember.id]
-            item = log.item
-        else:
+
+        if log != None:
+            if log.drawTime != None:
+                nextTime = log.drawTime + datetime.timedelta(days=1)
+            if log.guessMember == None:
+                ephemeral = True
+                msg = "你已經抽過了目標且還沒猜測，抽到的目標："
+                item = log.item
+            elif log.drawTime != None and datetime.datetime.now() < nextTime:
+                stamp = int(nextTime.timestamp())
+                replyMsg = f"等到 <t:{stamp}:T>(約<t:{stamp}:R>) 才可以抽"
+                await self.Respond(ctx, replyMsg)
+                return
+            else:
+                log = None
+
+        if msg == None:
             msg = "抽到的目標："
             item = self.GetRandomItem(onlyNever=False)
             self.InsertDrawLog(item=item, drawMember=commandMember)
 
-        await ctx.respond(f"{msg}{item.story}")
+        await self.Respond(ctx, f"{msg}{item.story}", ephemeral=ephemeral)
         if log == None or log.guessMember == None:
-            await ctx.respond(f"接下來請使用指令猜測目標的主人")
+            await self.Respond(ctx, f"接下來請使用指令猜測目標的主人", ephemeral=ephemeral)
 
-    @festivalGroup.command(name="新年-猜測", description="猜測目標的主人")
+    @festivalGroup.command(name=COMMAND_GUESS, description="猜測目標的主人")
     async def guess(self, ctx: discord.ApplicationContext, guess: discord.Member):
         if ctx.channel_id != self.botSettings.festivalChannel:
             await ctx.respond(f"請至<#{self.botSettings.festivalChannel}>下指令！", ephemeral=True)
@@ -199,27 +238,29 @@ class CogChineseNewYear2024(CompBase):
             await ctx.respond("請先抽過目標再猜")
             return
 
+        ephemeral = False
         drawLog: DrawLog = self.logMapByDrawId[commandMember.id]
         item = drawLog.item
         successful = True
         neverGuess = drawLog.guessMember == None
         if not neverGuess:
-            await ctx.respond(f"已經猜過了喔，猜測的人是{drawLog.guessMember.display_name}({drawLog.guessMember.name})")
+            ephemeral = True
+            await ctx.respond(f"已經猜過了喔，猜測的人是{drawLog.guessMember.display_name}({drawLog.guessMember.name})", ephemeral=ephemeral)
             successful = drawLog.guessMember == item.member
         else:
-            await ctx.respond(f"猜測的人是{guessMember.display_name}({guessMember.name})")
+            await ctx.respond(f"猜測的人是{guessMember.display_name}({guessMember.name})", ephemeral=ephemeral)
             if item.member != guessMember:
                 successful = False
         blessMemberList = [commandMember]
         flip = False
         if successful ^ flip:
-            await ctx.respond(f"答對了，獲得祝福「{item.bless}」")
+            await ctx.respond(f"答對了，獲得祝福「{item.bless}」", ephemeral=ephemeral)
             blessMemberList = [item.member, commandMember]
         else:
             if item.member == None or item.member == HIDE_MEMBER:
-                await ctx.respond(f"猜錯了，目標的主人匿名啦，哈哈")
+                await ctx.respond(f"猜錯了，目標的主人匿名啦，哈哈", ephemeral=ephemeral)
             else:
-                await ctx.respond(f"猜錯了")
+                await ctx.respond(f"猜錯了", ephemeral=ephemeral)
             if neverGuess:
                 testCount = 0
                 member = None
@@ -234,7 +275,7 @@ class CogChineseNewYear2024(CompBase):
                     blessMemberList = [item.member, commandMember]
                 else:
                     blessMemberList = [drawLog.blessMember]
-            await ctx.respond(f"祝福「{item.bless}」飛往了{blessMemberList[0].display_name}({blessMemberList[0].name})")
+            await ctx.respond(f"祝福「{item.bless}」飛往了{blessMemberList[0].display_name}({blessMemberList[0].name})", ephemeral=ephemeral)
 
         if neverGuess:
             self.UpdateGuessLog(drawLog, guessMember, blessMemberList[0])

@@ -13,7 +13,7 @@ from Bot.BotComponent.CompSystem import CompSystem
 from Bot.BotComponent.CompUpdateDatabase import CompUpdateDatabase
 from Bot.BotComponent.CompUsers import CompUsers
 from Bot.BotComponent.CompCommands import CompCommands
-from Bot.CogFestival.CogChristmas2023 import CogChristmas2023
+from Bot.Cogs.Festival.ChineseNewYear2024 import CogChineseNewYear2024
 from Bot.Cogs.SlashCommandsManager import SlashCommandManager
 
 
@@ -34,7 +34,6 @@ class BotNerolirain(BotBase):
         self.AddComponent("compCommands", CompCommands())
 
         self.AddCog("SlashCommand", SlashCommandManager())
-        self.AddCog("Christmas2023", CogChristmas2023())
-        # self.AddCog("Christmas2023", CogChristmas2023(self))
 
-        # self.load_extension(f"Bot.CogFestival.CogChristmas2023")
+        self.AddCog("ChineseNewYear2024", CogChineseNewYear2024())
+
