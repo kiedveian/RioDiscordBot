@@ -66,7 +66,7 @@ class CogChineseNewYear2024(CompBase):
             member = await self.GetMemberByAccount(account)
             if member == None:
                 self.LogE(f"找不到成員：{account}")
-                return
+                member = HIDE_MEMBER
         item.id = int(rowData[0])
         item.member = member
         item.bless = rowData[2]
@@ -128,8 +128,6 @@ class CogChineseNewYear2024(CompBase):
 
     async def GetMemberByAccount(self, account: str) -> discord.Member:
         member = self.botClient.GetGuild().get_member_named(account)
-        if member == None:
-            member = await self.botClient.GetGuild().get_member_named(id)
         return member
 
     async def GetMebmerById(self, id: int) -> discord.Member:
