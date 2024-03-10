@@ -11,6 +11,7 @@ from Bot.NewVersionTemp.CompBase2024 import CompBase
 from Bot.BotComponent.CompUsers import CompUsers
 from Bot.BotComponent.CompClose import CompClose
 from Bot.BotComponent.CompClose import CloseType
+from Bot.Cogs.Festival.FestivalFunctions import CogFestivalFunctions
 
 
 DRAW_START_TIME = datetime.datetime(2020, 1, 1)
@@ -57,10 +58,17 @@ class CompDraw(CompBase):
     compUsers: CompUsers = None
     compClose: CompClose = None
 
+    # 節慶相關
+    compFestivalFunctions: CogFestivalFunctions = None
+
+    # 愚人節只會抽到票，存起來加速
+    drawTicketItem: DrawItem = None
+
     def SetComponents(self, bot):
         super().SetComponents(bot)
         self.compClose = bot.GetComponent("compClose")
         self.compUsers = bot.GetComponent("compUsers")
+        self.compFestivalFunctions = bot.GetComponent("compFestivalFunctions")
 
     def Initial(self) -> bool:
         if not super().Initial():
@@ -156,6 +164,7 @@ class CompDraw(CompBase):
 
             if item.name == "機票":
                 DRAW_TICKET_ID = item.id
+                self.drawTicketItem = item
 
         # TODO lock
         self.weightSum = weightSum
@@ -194,6 +203,10 @@ class CompDraw(CompBase):
         nowTime = datetime.datetime.now()
         if self.nextUpdateTime < nowTime:
             self.LoadItems()
+
+        if self.compFestivalFunctions.IsFoolDay():
+            await self.ProcessFoolDay(message)
+            return
         if self.weightSum <= 0 or len(self.currentItems) == 0:
             self.LogE("Draw data error")
             return
@@ -211,6 +224,16 @@ class CompDraw(CompBase):
             self.compUsers.AddTicket(message.author, 1)
         elif item.IsBlockHouse():
             await self.compClose.CloseByDraw(message)
+
+# ------------------ 下面為愚人節相關 ------------------
+    async def ProcessFoolDay(self, message: discord.Message):
+        self.LogI("愚人節抽卡")
+        await self.drawTicketItem.Reply(message)
+        self.compFestivalFunctions.FoolDayUpdateUserDrawTicketEvent(
+            message.author.id)
+
+
+# ------------------ 上面為愚人節相關 ------------------
 
 
 # ------------------ 下面為管理員身份功能 ------------------

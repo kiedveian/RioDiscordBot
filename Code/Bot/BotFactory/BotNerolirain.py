@@ -15,6 +15,8 @@ from Bot.BotComponent.CompUsers import CompUsers
 from Bot.BotComponent.CompCommands import CompCommands
 from Bot.Cogs.Festival.ChineseNewYear2024 import CogChineseNewYear2024
 from Bot.Cogs.SlashCommandsManager import SlashCommandManager
+from Bot.Cogs.Festival.FestivalFunctions import CogFestivalFunctions
+from Bot.Cogs.Festival.FestivalDatas import CogFestivalDatas
 
 
 class BotNerolirain(BotBase):
@@ -35,5 +37,7 @@ class BotNerolirain(BotBase):
 
         self.AddCog("SlashCommand", SlashCommandManager())
 
-        self.AddCog("ChineseNewYear2024", CogChineseNewYear2024())
+        self.AddCog("compFestivalDatas", CogFestivalDatas())
+        self.AddCog("compFestivalFunctions", CogFestivalFunctions())
 
+        self.AddCog("ChineseNewYear2024", CogChineseNewYear2024())

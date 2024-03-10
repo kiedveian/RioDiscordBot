@@ -6,6 +6,7 @@ import re
 import discord
 from Bot.BotComponent.Base.CompBotBase import CompBotBase
 from Bot.NewVersionTemp.CompBase2024 import CompBase
+from Bot.Cogs.Festival.FestivalFunctions import CogFestivalFunctions
 
 
 class UserData:
@@ -26,6 +27,12 @@ NEW_USER_TICKET_AMOUNT = 3
 
 class CompUsers(CompBase):
     cacheUsers = {}
+
+    compFestivalFunctions: CogFestivalFunctions = None
+
+    def SetComponents(self, bot):
+        super().SetComponents(bot)
+        self.compFestivalFunctions = bot.GetComponent("compFestivalFunctions")
 
     def Initial(self) -> bool:
         if not super().Initial():
@@ -65,10 +72,15 @@ class CompUsers(CompBase):
             return self.cacheUsers[userId].ticket
         return 0
 
-    async def ReplayTicket(self, message: discord.Message):
+    async def ReplayTicketByMessage(self, message: discord.Message):
         amount = self.GetTicketCount(message.author.id)
         msg = f"你的機票還有 {amount} 張"
         await message.reply(content=msg)
+
+    async def ReplayTicketByConText(self, ctx: discord.ApplicationContext):
+        amount = self.GetTicketCount(ctx.author.id)
+        msg = f"你的機票還有 {amount} 張"
+        await ctx.respond(msg, ephemeral=True)
 
     def AddTicket(self, member: discord.Member, amount: int):
         if member.id not in self.cacheUsers:
@@ -100,4 +112,14 @@ class CompUsers(CompBase):
 
     async def on_message(self, message: discord.Message) -> None:
         if re.match("關誰好呢", message.content):
-            await self.ReplayTicket(message=message)
+            if self.compFestivalFunctions.IsFoolDay():
+                await message.reply(content="指令維修中，請改用 /查機票數量 ")
+            else:
+                await self.ReplayTicketByMessage(message=message)
+
+    async def user_tickets_amount(self, ctx: discord.ApplicationContext):
+        if self.compFestivalFunctions.IsFoolDay() and self.compFestivalFunctions.FoolDayCheckUserTicketEvent(ctx.author.id):
+            amount = self.GetTicketCount(ctx.author.id)
+            await ctx.respond(f"你的機票還是{amount}張啦，愚人節快樂", ephemeral=True)
+        else:
+            await self.ReplayTicketByConText(ctx)
