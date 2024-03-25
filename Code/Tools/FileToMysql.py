@@ -13,7 +13,9 @@ class Setting:
     keyList: list = []
     checkIndex: list = []
     dbPrefix: str = ""
+    skipIndex: list = []
     uniqueKeysIndex: list = []
+    replaceDatas: list = []
 
 
 def GetMorningSetting() -> Setting:
@@ -35,6 +37,17 @@ def GetIdiomSetting() -> Setting:
     return result
 
 
+def GetFoolDaySetting() -> Setting:
+    result = Setting()
+    result.keyList = ["create_time", "author", "nick"]
+    result.checkIndex = [2]
+    result.skipIndex = [0]
+    result.dbPrefix = "festival_2024_fool_day_item_"
+    result.uniqueKeysIndex = [2]
+    result.replaceDatas = [[2, "\n", ""]]
+    return result
+
+
 def File2Mysql(filePath, tablePostfix, setting: Setting):
     with open(filePath, "r", encoding="utf-8") as file:
         keyList = setting.keyList
@@ -49,9 +62,17 @@ def File2Mysql(filePath, tablePostfix, setting: Setting):
             password=os.getenv("MYSQL_PASSWORD"),
             schema_name=os.getenv("MYSQL_SCHEMA_NAME")
         )
-        keyString = ",".join(keyList)
+        selectKeyString = ",".join(keyList)
+        insertKeyString = ""
+        for index in range(len(keyList)):
+            if index in setting.skipIndex:
+                continue
+            if len(insertKeyString) == 0:
+                insertKeyString = keyList[index]
+            else:
+                insertKeyString = insertKeyString + "," + keyList[index]
         tableName = f"discord_bot.{setting.dbPrefix}{tablePostfix}"
-        selectCommand = f"SELECT {keyString} FROM {tableName}"
+        selectCommand = f"SELECT {selectKeyString} FROM {tableName}"
         selectDatas = sql.SimpleSelect(selectCommand)
         for rowData in selectDatas:
             for index in setting.uniqueKeysIndex:
@@ -65,6 +86,7 @@ def File2Mysql(filePath, tablePostfix, setting: Setting):
                 continue
             lineSplit = line.split("\t")
             needSkip = False
+
             for index in setting.checkIndex:
                 if len(lineSplit[index]) == 0:
                     needSkip = True
@@ -78,17 +100,24 @@ def File2Mysql(filePath, tablePostfix, setting: Setting):
             for index in setting.uniqueKeysIndex:
                 if len(lineSplit[index]) != 0:
                     uniqueDatas[index][lineSplit[index]] = True
-                    
+
             lineArr = []
             for index in range(len(keyList)):
+                if index in setting.skipIndex:
+                    continue
+                for replaceArr in setting.replaceDatas:
+                    if replaceArr[0] == index:
+                        lineSplit[index] = lineSplit[index].replace(
+                            replaceArr[1], replaceArr[2])
+
                 lineArr.append(lineSplit[index])
             sqlArr.append(lineArr)
 
         valueString = "%s"
-        for index in range(len(keyList)-1):
+        for index in range(len(keyList)-1 - len(setting.skipIndex)):
             valueString += " ,%s"
         insertCommand = (f"INSERT INTO {tableName}"
-                         f"({keyString})"
+                         f"({insertKeyString})"
                          f"VALUES ({valueString})")
         sql.SimpleCommandMany(insertCommand, sqlArr)
 
@@ -124,6 +153,8 @@ if __name__ == '__main__':
                 data = GetMorningSetting()
             case "idiom":
                 data = GetIdiomSetting()
+            case "fool_day":
+                data = GetFoolDaySetting()
             case _:
                 print("資料類別有誤")
                 ok = False

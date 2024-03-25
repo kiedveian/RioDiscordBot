@@ -33,7 +33,7 @@ class BotBase(EventBotBase):
                     self.cacheGuild = guild
                     break
             if self.cacheGuild == None:
-                self.LogE("找不到對應主伺服器: ", guild)
+                self.LogE("找不到對應主伺服器 ")
         return self.cacheGuild
 
     def GetChannel(self, channelId) -> (discord.abc.GuildChannel | None):

@@ -1,6 +1,7 @@
 啟動工具
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test draw ../../../Files/sql/morning.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test idiom ../../../Files/sql/idiom.tsv
+D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test fool_day ../../../Files/sql/fool_day.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain idiom ../../../Files/sql/idiom.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain draw ../../../Files/sql/morning.tsv
 
