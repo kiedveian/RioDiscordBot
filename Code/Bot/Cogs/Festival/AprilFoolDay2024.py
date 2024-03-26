@@ -13,6 +13,8 @@ from Bot.Cogs.Festival.FestivalDatas import CogFestivalDatas, FestivalId
 # 2-2.如果有查機票，要回愚人節快樂
 # 3. 亂給祝福
 
+MIN_RANDOM_BLESS_LENGTH = 5
+MAX_BLESS_LENGTH = 20
 COMMAND_DRAW = "愚人節-抽取祝福"
 
 
@@ -122,6 +124,9 @@ class CogAprilFoolDay2024(CompBase):
             msg = f"抽到的祝福是「{nick}」，但抽到了「{targetMember.display_name}」，不要亂改機器人的名子！！！"
         else:
             msg = f"「{nick}」飛往了{targetMember.display_name}({targetMember.name})"
+            if len(nick) > MAX_BLESS_LENGTH:
+                nick = self.GetCutNick(nick)
+                msg = f"{msg}，但是祝福太長了，只有「{nick}」飛了出去"
             await self.UpdateMemberNick(nick=nick, targetMember=targetMember)
         self.UpdateNickLog(nick=nick, drawMember=commandMember,
                            targetMember=targetMember)
@@ -134,9 +139,9 @@ class CogAprilFoolDay2024(CompBase):
         selectData = self.sql.SimpleSelect(command)
         allItems = []
         for rowData in selectData:
-            if len(rowData[0]) > 20:
-                self.LogW(f"詞「{rowData[0]}」過長")
-                continue
+            # if len(rowData[0]) > MAX_BLESS_LENGTH:
+            #     self.LogW(f"詞「{rowData[0]}」過長")
+            #     continue
             allItems.append(rowData[0])
 
         self.allItems = allItems
@@ -212,6 +217,13 @@ class CogAprilFoolDay2024(CompBase):
                    "VALUES (%s, %s, %s, %s, %s, %s);")
         self.sql.SimpleCommand(
             command, (nick, drawMember.id, drawMember.name, timeString, targetMember.id, targetMember.name))
+
+    def GetCutNick(self, nick: str):
+        oldSize = len(nick)
+        newSize = random.randrange(
+            MAX_BLESS_LENGTH - MIN_RANDOM_BLESS_LENGTH+1) + MIN_RANDOM_BLESS_LENGTH
+        chooseShift = random.randrange(oldSize-newSize+1)
+        return nick[chooseShift:chooseShift+newSize]
 
     async def UpdateMemberNick(self, nick: str, targetMember: discord.Member):
         oldNick = targetMember.display_name
