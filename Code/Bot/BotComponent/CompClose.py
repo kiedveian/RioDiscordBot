@@ -65,7 +65,7 @@ class CompClose(CompBase):
             return False
 
         self.allEvent["on_message"] = True
-        self.allEvent["on_raw_reaction_add"] = True
+        self.allEvent["on_raw_reaction_add"] = hasattr(self.botSettings, 'closeReatcionList')
         self.allEvent["PreSecondEvent"] = True
 
         self.processCount = 0

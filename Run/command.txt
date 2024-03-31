@@ -4,6 +4,7 @@ D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test idiom ../../..
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test fool_day ../../../Files/sql/fool_day.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain idiom ../../../Files/sql/idiom.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain draw ../../../Files/sql/morning.tsv
+D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain fool_day ../../../Files/sql/fool_day.tsv
 
 舊式啟動機員人
 PS D:\data\Git\RioTest\DiscordBot> python .\DiscordBotEnter.py nerolirain nerolirain
@@ -13,6 +14,7 @@ latest版本
 d:\data\Git\Discord\Bot\Run\Scripts\RunBotLatest.ps1 test test
 d:\data\Git\Discord\Bot\Run\Scripts\RunTestBotLatest.ps1
 d:\data\Git\Discord\Bot\Run\Scripts\RunNerolirainBotLatest.ps1
+d:\data\Git\Discord\Bot\Run\Scripts\RunMeiBotLatest.ps1
 backup版本，需確認Files相關路徑
 PS D:\data\Git\Discord\Bot\Run\Backup\test\2023-0924_163604> python BotMain.py test test
 
