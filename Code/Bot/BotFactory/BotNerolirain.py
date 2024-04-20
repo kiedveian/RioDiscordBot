@@ -17,7 +17,7 @@ from Bot.Cogs.Festival.ChineseNewYear2024 import CogChineseNewYear2024
 from Bot.Cogs.SlashCommandsManager import SlashCommandManager
 from Bot.Cogs.Festival.FestivalFunctions import CogFestivalFunctions
 from Bot.Cogs.Festival.FestivalDatas import CogFestivalDatas
-
+from Bot.Cogs.Festival.AprilFoolDay2024 import CogAprilFoolDay2024
 
 class BotNerolirain(BotBase):
 
@@ -41,3 +41,6 @@ class BotNerolirain(BotBase):
         self.AddCog("compFestivalFunctions", CogFestivalFunctions())
 
         self.AddCog("ChineseNewYear2024", CogChineseNewYear2024())
+
+        self.AddCog("AprilFoolDay2024", CogAprilFoolDay2024())
+

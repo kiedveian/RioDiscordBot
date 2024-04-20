@@ -59,7 +59,7 @@ class CogAprilFoolDay2024(CompBase):
 
         now = datetime.datetime.now()
         year = now.year
-        self.cooldownDelta = datetime.timedelta(seconds=82800)
+        self.cooldownDelta = datetime.timedelta(seconds=28800)
 
         self.startTime = datetime.datetime(year=year, month=4, day=1)
         self.endTime = datetime.datetime(year=year, month=4, day=2)
@@ -198,9 +198,12 @@ class CogAprilFoolDay2024(CompBase):
         return self.allItems[rand]
 
     async def GetRandomTargetMember(self) -> discord.Member:
-        chooseIndex = random.randrange(len(self.cacheTargetMembers))
-        memberId = self.cacheTargetMembers[chooseIndex]
-        return await self.GetMebmerById(memberId)
+        member: discord.Member = None
+        while member == None or member.bot:
+            chooseIndex = random.randrange(len(self.cacheTargetMembers))
+            memberId = self.cacheTargetMembers[chooseIndex]
+            member = await self.GetMebmerById(memberId)
+        return member
 
     def UpdateNickLog(self, nick: str, drawMember: discord.Member, targetMember: discord.Member):
         log = DrawNickLog()

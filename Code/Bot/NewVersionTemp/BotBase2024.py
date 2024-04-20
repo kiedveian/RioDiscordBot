@@ -42,7 +42,9 @@ class BotBase(EventBotBase):
             return guild.get_channel(channelId)
         return None
 
-    def GetCloseChannel(self) -> discord.TextChannel:
+    def GetCloseChannel(self, defaultChannel = None) -> discord.TextChannel:
+        if self.botSettings.closeChannelId == -1:
+            return defaultChannel
         if self.cacheCloseChannel == None:
             self.cacheCloseChannel = self.GetChannel(
                 self.botSettings.closeChannelId)
