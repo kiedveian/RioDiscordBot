@@ -21,7 +21,7 @@ class CompCommands(CompBase):
         self.commandColseTime = (f" SELECT `log`.`user_id` AS `user_id`, `all_user`.`nick` AS `nick`"
                                  f" ,ROUND((SUM(`log`.`delta_time`) / 60.0), 1) AS `total_time(min)`"
                                  f" ,COUNT(*) AS `cnt`"
-                                  f"  FROM (`close_log_{self.botSettings.sqlPostfix}` `log`"
+                                 f"  FROM (`close_log_{self.botSettings.sqlPostfix}` `log`"
                                  f"   LEFT JOIN `all_user` ON((`log`.`user_id`= `all_user`.`user_id`)))"
                                  f" WHERE `log`.`event_time` > '%s' AND `log`.`event_time` < '%s'"
                                  f" GROUP BY `log`.`user_id`"
@@ -55,14 +55,21 @@ class CompCommands(CompBase):
             count = len(datas)
             noEnough = True
         resultString = ""
-        for index in range(count):
+        count = 0
+        for rowData in datas:
             # user_id, nick total_time(min)
-            rowData = datas[index]
-            member = await self.botClient.GetGuild().fetch_member(rowData[0])
-            resultString += f"\n第{index+1}名 {rowData[2]}分({rowData[3]}次) {member.display_name}({member.name})"
+            try:
+                member = await self.botClient.GetGuild().fetch_member(rowData[0])
+                count += 1
+                resultString += f"\n第{count}名 {rowData[2]}分({rowData[3]}次) {member.display_name}({member.name})"
+            except discord.errors.NotFound:
+                pass
+            if count >= 3:
+                break
 
         if noEnough:
             resultString += f"\n第{count+1}名 從缺"
 
-        embed = discord.Embed(title=title, description=resultString, color=0x5acef5)
+        embed = discord.Embed(
+            title=title, description=resultString, color=0x5acef5)
         await message.reply(embed=embed, mention_author=False)

@@ -19,6 +19,8 @@ from Bot.Cogs.Festival.FestivalFunctions import CogFestivalFunctions
 from Bot.Cogs.Festival.FestivalDatas import CogFestivalDatas
 from Bot.Cogs.Festival.AprilFoolDay2024 import CogAprilFoolDay2024
 
+from Bot.BotComponent.CompNerolirainTest import CompNerolirainTest
+
 class BotNerolirain(BotBase):
 
     def _AddAllComponents(self):
@@ -40,7 +42,10 @@ class BotNerolirain(BotBase):
         self.AddCog("compFestivalDatas", CogFestivalDatas())
         self.AddCog("compFestivalFunctions", CogFestivalFunctions())
 
-        self.AddCog("ChineseNewYear2024", CogChineseNewYear2024())
+        # self.AddComponent("compNerolirainTest", CompNerolirainTest())
 
-        self.AddCog("AprilFoolDay2024", CogAprilFoolDay2024())
+        # self.AddCog("ChineseNewYear2024", CogChineseNewYear2024())
+
+        # self.AddCog("AprilFoolDay2024", CogAprilFoolDay2024())
+
 

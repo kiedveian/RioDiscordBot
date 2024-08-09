@@ -273,7 +273,7 @@ class CompClose(CompBase):
         if closeData.isReply:
             await closeData.message.reply(embed=embed, mention_author=False)
         else:
-            await self.botClient.GetCloseChannel().send(embed=embed)
+            await self.botClient.GetCloseChannel(closeData.message.channel).send(embed=embed)
 
 # ------------------ 下面為各種事件，給 botClient 呼叫的 ------------------
 

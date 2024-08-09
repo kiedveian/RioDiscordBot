@@ -101,6 +101,8 @@ class CogChineseNewYear2024(CompBase):
             log = DrawLog()
             log.item = self.itemMapByItemId[int(rowData[0])]
             log.drawMember = await self.GetMebmerById(int(rowData[1]))
+            if log.drawMember == None:
+                continue
             log.drawTime = rowData[3]
             log.guessMember = None
             log.blessMember = None
