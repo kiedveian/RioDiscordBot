@@ -4,7 +4,7 @@ D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test idiom ../../..
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql test fool_day ../../../Files/sql/fool_day.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain idiom ../../../Files/sql/idiom.tsv
 D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain draw ../../../Files/sql/morning.tsv
-D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain fool_day ../../../Files/sql/fool_day.tsv
+D:\data\Git\Discord\Bot> .\Run\Scripts\RunTools.ps1 file2sql nerolirain fool_day ../../../Files/sql/fool_day_change.tsv
 
 舊式啟動機員人
 PS D:\data\Git\RioTest\DiscordBot> python .\DiscordBotEnter.py nerolirain nerolirain

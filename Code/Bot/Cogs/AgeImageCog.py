@@ -6,7 +6,7 @@ from discord.ext import commands
 from Utility.ImageTool import AddTextToImage
 
 
-class AgeImageCog(commands.Cog):
+class AgeImageCog(commands.Cog, name = "agetest"):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -48,6 +48,9 @@ class AgeImageCog(commands.Cog):
             return
         await ctx.respond(file=file)
 
+    @commands.slash_command(name="gnls", description="測試用GNLS")
+    async def gnls(self, ctx: commands.Context):
+        await ctx.respond(f"GNLS", ephemeral=True)
 
 def setup(bot: commands.Bot):
     bot.add_cog(AgeImageCog(bot))
